@@ -1,6 +1,8 @@
 # Dependabot version updates. Every PR is assigned to the org owner so it reaches
-# their notifications; nobody has to check the repo. Security updates (PRs that fix
-# a vulnerable package) are enabled for the whole organization and need nothing here.
+# their notifications; nobody has to check the repo. The 7-day cooldown skips
+# versions published in the last week, so a compromised or broken release gets caught
+# upstream before it is proposed here. Security updates (PRs that fix a vulnerable
+# package) are enabled for the whole organization and need nothing here.
 version: 2
 updates:
   - package-ecosystem: composer
@@ -10,6 +12,8 @@ updates:
       day: monday
       time: "07:00"
       timezone: Europe/Rome
+    cooldown:
+      default-days: 7
     assignees:
       - acaselli
   - package-ecosystem: github-actions
@@ -19,5 +23,7 @@ updates:
       day: monday
       time: "07:00"
       timezone: Europe/Rome
+    cooldown:
+      default-days: 7
     assignees:
       - acaselli
