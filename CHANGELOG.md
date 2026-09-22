@@ -5,6 +5,13 @@ All notable changes to the VIT ID Authentication extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.6] - 22 September 2026
+
+### Changed
+
+- **Dependencies**: `auth0/auth0-php` updated from 8.19.0 to 9.2.0. The extension only uses the Authentication API (`login`, `exchange`, `getUser`, `logout`), which is unchanged in v9; the Management API is called directly over HTTP and is not affected.
+- **Build**: Composer now resolves dependencies for PHP 8.2, the minimum supported version, regardless of the PHP used to build. The `php-http/discovery` Composer plugin is disabled so it cannot auto-add an HTTP client library; the SDK keeps using the Guzzle client that CiviCRM core already ships.
+
 ## [1.9.5] - 21 September 2026
 
 ### Fixed
