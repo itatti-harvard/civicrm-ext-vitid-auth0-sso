@@ -383,6 +383,17 @@ sudo chown -R $USER:$USER /home/vitadmin/civicrm/ext/
    curl https://your-tenant.auth0.com/
    ```
 
+### 403 "Access Denied" on the VIT ID Login Link After an Upgrade
+
+After replacing the extension directory (for example `vitid_auth0-v1.9.4` with `vitid_auth0-v1.9.5`), CiviCRM may keep the old route table and the VIT ID login link answers 403. Rebuild the menu:
+
+```bash
+docker exec <civicrm-container> cv flush
+docker exec <civicrm-container> cv ev 'CRM_Core_Menu::store();'
+```
+
+Or, logged in as an administrator, open `https://your-site/civicrm/menu/rebuild?reset=1`.
+
 ### "Class not found" Errors
 
 **Error**: "Class 'Auth0\SDK\Auth0' not found"

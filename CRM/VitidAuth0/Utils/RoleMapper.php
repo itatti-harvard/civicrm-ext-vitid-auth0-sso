@@ -791,7 +791,7 @@ class CRM_VitidAuth0_Utils_RoleMapper {
       }
       
       // Always log successful session creation (not just debug mode)
-      Civi::log()->info('VIT ID createUserSession - Session created successfully - Contact ID: ' . $contactId . ', UFMatch ID: ' . $ufMatchId . ', ufID: ' . $ufID . ', Roles: ' . json_encode($civiRoles ?? []) . ', PHP Session ID: ' . ($sessionIdAfter ?: 'NULL'));
+      Civi::log()->info('VIT ID createUserSession - Session created successfully - Contact ID: ' . $contactId . ', UFMatch ID: ' . $ufMatchId . ', ufID: ' . $ufID . ', Roles: ' . json_encode($civiRoles ?? []) . ', PHP Session ID: ' . (session_id() ?: 'NULL'));
 
       // Note: In CiviCRM Standalone, setting session variables (userID, ufID) is sufficient
       // The setUserContext() method doesn't exist in CRM_Utils_System_Standalone

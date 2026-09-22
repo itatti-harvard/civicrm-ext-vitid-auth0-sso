@@ -5,6 +5,17 @@ All notable changes to the VIT ID Authentication extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.5] - 2026-09-21
+
+### Fixed
+
+- **CiviCRM 6.15+ compatibility**: The extension no longer bundles its own copy of `psr/log`. CiviCRM core ships `psr/log` v3 since 6.15, and the bundled v1 copy caused a fatal `Declaration of Psr\Log\AbstractLogger::emergency() must be compatible` error (HTTP 500) on the VIT ID login and callback pages. Core's copy is now used instead.
+- **Logging**: Fixed an undefined variable warning in the "session created" log line after a successful login.
+
+### Changed
+
+- **Dependencies**: `auth0/auth0-php` updated from 8.17.0 to 8.19.0.
+
 ## [1.9.4] - 2025-11-27
 
 ### Fixed
