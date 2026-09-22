@@ -22,7 +22,7 @@ class CRM_VitidAuth0_Page_Login extends CRM_Core_Page {
       }
 
       // Initialize Auth0 client
-      require_once __DIR__ . '/../../../vendor/autoload.php';
+      _vitid_auth0_load_vendor();
       $auth0Client = new CRM_VitidAuth0_Utils_Auth0Client();
 
       // Store the return URL in the session

@@ -185,6 +185,14 @@ exports.onExecutePostLogin = async (event, api) => {
 - Check that Auth0 Management API is accessible
 - Review CiviCRM error logs: `civicrm/ConfigAndLog/CiviCRM.*.log`
 
+### HTTP 500 on the VIT ID Login Link After Upgrading CiviCRM
+
+If the container log shows `Declaration of Psr\Log\AbstractLogger::emergency() must be compatible`, the extension is older than 1.9.5 and bundles its own `psr/log`, which clashes with the copy CiviCRM 6.15+ ships. Upgrade the extension to 1.9.5 or later.
+
+### HTTP 403 on the VIT ID Login Link After Replacing the Extension Directory
+
+CiviCRM kept the old route table. Rebuild the menu with `cv flush` followed by `cv ev 'CRM_Core_Menu::store();'`, or open `civicrm/menu/rebuild?reset=1` as an administrator.
+
 ### Dependencies Not Loading
 
 If you see class not found errors:
