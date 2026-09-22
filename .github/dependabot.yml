@@ -3,6 +3,7 @@
 # versions published in the last week, so a compromised or broken release gets caught
 # upstream before it is proposed here. Security updates (PRs that fix a vulnerable
 # package) are enabled for the whole organization and need nothing here.
+# GitHub Actions and Composer updates are grouped into one PR per run.
 version: 2
 updates:
   - package-ecosystem: composer
@@ -16,6 +17,10 @@ updates:
       default-days: 7
     assignees:
       - acaselli
+    groups:
+      composer:
+        patterns:
+          - "*"
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -27,3 +32,7 @@ updates:
       default-days: 7
     assignees:
       - acaselli
+    groups:
+      github-actions:
+        patterns:
+          - "*"
