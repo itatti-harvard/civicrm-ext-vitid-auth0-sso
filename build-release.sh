@@ -62,6 +62,7 @@ mkdir -p "${PACKAGE_DIR}"
 # Copy all files except excluded ones
 rsync -av \
     --exclude='.git*' \
+    --exclude='.context' \
     --exclude='.DS_Store' \
     --exclude='*.zip' \
     --exclude='build-release.sh' \
