@@ -6,6 +6,25 @@ use CRM_VitidAuth0_ExtensionUtil as E;
 // phpcs:enable
 
 /**
+ * Load the extension's bundled Composer dependencies (Auth0 SDK and friends).
+ *
+ * Composer registers its autoloader *prepended*, which would let our bundled
+ * copies of libraries CiviCRM core also ships (psr/log, guzzle, ...) shadow
+ * core's and cause "Declaration ... must be compatible" fatals. Re-register it
+ * appended so core's classes always win and ours are only a fallback.
+ */
+function _vitid_auth0_load_vendor(): void {
+  static $loaded = FALSE;
+  if ($loaded) {
+    return;
+  }
+  $loaded = TRUE;
+  $loader = require __DIR__ . '/vendor/autoload.php';
+  $loader->unregister();
+  $loader->register(FALSE);
+}
+
+/**
  * Implements hook_civicrm_config().
  *
  * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_config/

@@ -5,11 +5,11 @@ All notable changes to the VIT ID Authentication extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.9.5] - 2026-09-21
+## [1.9.5] - 21 September 2026
 
 ### Fixed
 
-- **CiviCRM 6.15+ compatibility**: The extension no longer bundles its own copy of `psr/log`. CiviCRM core ships `psr/log` v3 since 6.15, and the bundled v1 copy caused a fatal `Declaration of Psr\Log\AbstractLogger::emergency() must be compatible` error (HTTP 500) on the VIT ID login and callback pages. Core's copy is now used instead.
+- **CiviCRM 6.15+ compatibility**: The bundled Composer autoloader is now registered after CiviCRM's, so libraries core also ships (such as `psr/log`, v3 since CiviCRM 6.15) are loaded from core instead of from the extension's `vendor/`. The bundled `psr/log` v1 copy previously caused a fatal `Declaration of Psr\Log\AbstractLogger::emergency() must be compatible` error (HTTP 500) on the VIT ID login and callback pages. The explicit `psr/log` requirement was also dropped.
 - **Logging**: Fixed an undefined variable warning in the "session created" log line after a successful login.
 
 ### Changed
