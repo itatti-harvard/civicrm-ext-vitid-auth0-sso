@@ -8,8 +8,8 @@
     <author>Andrea Caselli</author>
     <email>acaselli@itatti.harvard.edu</email>
   </maintainer>
-  <releaseDate>2026-09-21</releaseDate>
-  <version>1.9.5</version>
+  <releaseDate>2026-09-22</releaseDate>
+  <version>1.9.6</version>
   <develStage>stable</develStage>
   <compatibility>
     <ver>5.0</ver>
