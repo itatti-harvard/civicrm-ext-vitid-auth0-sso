@@ -8,6 +8,8 @@ on:
 permissions:
   contents: write
 
+# Only GitHub-owned actions are allowed by the organisation's Actions policy,
+# so PHP comes from the runner image and the release is published with the gh CLI.
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
@@ -15,11 +17,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.2"
-          tools: composer:v2
+      - name: Select PHP 8.2
+        run: |
+          set -euo pipefail
+          if [ -x /usr/bin/php8.2 ]; then
+            sudo update-alternatives --set php /usr/bin/php8.2
+          else
+            echo "PHP 8.2 not present on this runner image; using the default PHP."
+          fi
+          php -v | head -n 1
+          composer --version
 
       - name: Validate tag matches info.xml version
         run: |
@@ -41,6 +48,11 @@ jobs:
           ./build-release.sh
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: vitid_auth0-v*.zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "${GITHUB_REF_NAME}" vitid_auth0-v*.zip \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes
