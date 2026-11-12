@@ -19,7 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Roles at sign-in**: If no CiviCRM role can be mapped at the moment of sign-in (a mapping removed during the login, or the lookup failed), the sign-in is refused with the usual "required permissions" message. Before, the person was signed in with whatever roles they had previously.
 - **Login page button**: On a slow page load the VIT ID button could fail to appear, because the script stopped retrying when CiviCRM's login module was not registered yet.
 - **Login link with a malformed destination**: `?destination[]=…` caused a server error on the VIT ID login route; it is now ignored.
-- **Log entries**: Return addresses are logged JSON-encoded, so a crafted address cannot add fake lines to the CiviCRM log.
+- **Log entries**: Return addresses, the error text Auth0 sends back to the callback, malformed `state`/`code` values and the login page's destination are logged JSON-encoded, so a crafted link cannot add fake lines to the CiviCRM log. Debug logging no longer writes the session save path, which for Redis can contain its password.
+- **Role update at sign-in**: The user's roles are now replaced in one database transaction, with the user locked first. Two sign-ins of the same user at the same moment could end with the roles of both, and a failure halfway could leave the user with no roles.
 - **Session ID in the log**: The callback no longer writes the logged-in session ID to the CiviCRM log on every login (and debug logging no longer writes it either). Anyone who could read the log could have used it to act as that user.
 - **Settings page shows the client secret**: The saved Auth0 client secret was written into the settings page's HTML. The field is now empty; leave it empty to keep the saved secret, or enter a new one to replace it.
 - **Duplicate role mapping**: Adding an Auth0 role that is already mapped showed a raw database error. It now says the role is already mapped and how to change it. Other errors on the role mapping list no longer show database messages either.
@@ -36,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Token storage**: The Auth0 SDK's own session (user profile, ID and access tokens) is now kept in memory for the callback request only, instead of in the shared database table. The extension never read it on later requests; CiviCRM's session takes over after login.
 - **Expired state cleanup**: Expired rows are deleted every time a login stores its values, instead of on a random 1% of reads.
 - **Different hostname**: A login that starts on one hostname and returns to another (for example while both an old and a new address are served) no longer finds its values. It returns to the login page with "Your VIT ID sign-in expired or was started in another window. Please sign in again.", and signing in again works.
-- **Expired or interrupted sign-in**: A sign-in that cannot be finished because it was started in another window, on the other hostname, or left on the VIT ID page for over an hour now asks the person to sign in again, instead of showing the generic authentication error.
+- **Expired or interrupted sign-in**: A sign-in that cannot be finished because it was started in another window, on the other hostname, or left on the VIT ID page for over an hour now asks the person to sign in again, instead of showing the generic authentication error. If the sign-in values cannot be saved at all (a database problem), the login now stops at the start with the usual error, instead of sending the person to VIT ID and then asking them to sign in again.
 
 ## [1.9.6] - 22 September 2026
 

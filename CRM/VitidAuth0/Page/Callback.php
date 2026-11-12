@@ -35,7 +35,7 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
               if (preg_match('/^[a-f0-9]+$/i', $value)) {
                 $params[$param] = $value;
               } else {
-                Civi::log()->warning('VIT ID Callback - Invalid state parameter format: ' . substr($value, 0, 50));
+                Civi::log()->warning('VIT ID Callback - Invalid state parameter format: ' . json_encode(substr($value, 0, 50)));
                 throw new Exception('Invalid state parameter format.');
               }
             } elseif ($param === 'code' && !empty($value)) {
@@ -43,17 +43,12 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
               if (preg_match('/^[A-Za-z0-9\-_]+$/', $value)) {
                 $params[$param] = $value;
               } else {
-                Civi::log()->warning('VIT ID Callback - Invalid code parameter format: ' . substr($value, 0, 50));
+                Civi::log()->warning('VIT ID Callback - Invalid code parameter format: ' . json_encode(substr($value, 0, 50)));
                 throw new Exception('Invalid authorization code format.');
               }
             } elseif (in_array($param, ['error', 'error_description'])) {
-              // Error parameters: allow alphanumeric, spaces, and common punctuation
-              if (preg_match('/^[A-Za-z0-9\s\-_.,:;!?()]+$/u', $value)) {
-                $params[$param] = $value;
-              } else {
-                // Log but don't fail - error messages might contain special chars
-                $params[$param] = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
-              }
+              // Only ever logged (JSON-encoded), never shown to the user
+              $params[$param] = $value;
             }
           }
         }
@@ -140,16 +135,10 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
       $session->set(CRM_VitidAuth0_Utils_DatabaseStore::SESSION_KEY, NULL);
       
       $sessionHandler = ini_get('session.save_handler');
-      $sessionSavePath = session_save_path();
-      
-      // CiviCRM 6.7.2 with Redis session handler compatibility
-      // Redis session handler automatically manages session IDs and cookies
+
+      // Not the save path: for Redis it can contain the password
       if ($debugEnabled) {
-        Civi::log()->debug('VIT ID Callback - Session handler: ' . $sessionHandler . ', Save path: ' . ($sessionSavePath ?: 'default'));
-        
-        if ($sessionHandler === 'redis' && $sessionSavePath) {
-          Civi::log()->debug('VIT ID Callback - Using Redis session handler: ' . $sessionSavePath);
-        }
+        Civi::log()->debug('VIT ID Callback - Session handler: ' . $sessionHandler);
       }
       
       // Store session objects - this ensures CiviCRM session data is persisted

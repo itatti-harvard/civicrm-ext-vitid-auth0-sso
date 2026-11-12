@@ -159,24 +159,23 @@ class CRM_VitidAuth0_Utils_DatabaseStore implements StoreInterface {
   /**
    * Persist a value to the database.
    *
+   * Failures are not swallowed: a login whose state cannot be saved would only
+   * fail later at the callback, telling the user to sign in again when that
+   * cannot help. Throwing here stops it at the login page with an error instead.
+   *
    * @param string $key
    * @param mixed $value
    */
   private function persist(string $key, $value): void {
-    try {
-      CRM_Core_DAO::executeQuery(
-        "INSERT INTO civicrm_vitid_auth0_state (`key`, `value`, `expire`) VALUES (%1, %2, %3)
-         ON DUPLICATE KEY UPDATE `value` = %2, `expire` = %3",
-        [
-          1 => [$this->prefix . $key, 'String'],
-          2 => [serialize($value), 'String'],
-          3 => [time() + self::TTL_SECONDS, 'Integer'],
-        ]
-      );
-    }
-    catch (Exception $e) {
-      Civi::log()->error('VIT ID DatabaseStore: Error setting key ' . $key . ': ' . $e->getMessage());
-    }
+    CRM_Core_DAO::executeQuery(
+      "INSERT INTO civicrm_vitid_auth0_state (`key`, `value`, `expire`) VALUES (%1, %2, %3)
+       ON DUPLICATE KEY UPDATE `value` = %2, `expire` = %3",
+      [
+        1 => [$this->prefix . $key, 'String'],
+        2 => [serialize($value), 'String'],
+        3 => [time() + self::TTL_SECONDS, 'Integer'],
+      ]
+    );
   }
 
   /**

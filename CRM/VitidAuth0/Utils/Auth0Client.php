@@ -132,7 +132,7 @@ class CRM_VitidAuth0_Utils_Auth0Client {
     // Check for error in params first
     if (!empty($params['error'])) {
       $errorDescription = $params['error_description'] ?? $params['error'];
-      throw new \Exception('VIT ID authentication failed: ' . $errorDescription);
+      throw new \Exception('VIT ID authentication failed: ' . json_encode((string) $errorDescription));
     }
 
     try {

@@ -687,7 +687,16 @@ class CRM_VitidAuth0_Utils_RoleMapper {
       // Assign roles to user via civicrm_user_role table
       // The user_id in civicrm_user_role is the UFMatch.id (not contact_id)
       if (!empty($civiRoles) && !empty($ufMatchId)) {
+        // Replace the roles in one transaction, locking the user's row first, so two
+        // sign-ins of the same user at once cannot end with both sets of roles, and a
+        // failed insert does not leave the user with none.
+        $transaction = new CRM_Core_Transaction();
         try {
+          CRM_Core_DAO::executeQuery(
+            "SELECT id FROM civicrm_uf_match WHERE id = %1 FOR UPDATE",
+            [1 => [$ufMatchId, 'Integer']]
+          );
+
           // Delete existing roles for this user
           CRM_Core_DAO::executeQuery(
             "DELETE FROM civicrm_user_role WHERE user_id = %1",
@@ -734,7 +743,9 @@ class CRM_VitidAuth0_Utils_RoleMapper {
           }
           self::debugLog('VIT ID createUserSession - Successfully assigned roles: ' . json_encode($assignedRoles));
 
+          $transaction->commit();
         } catch (\Exception $e) {
+          $transaction->rollback();
           Civi::log()->error('VIT ID createUserSession - Error assigning roles: ' . $e->getMessage() . ' | Contact ID: ' . $contactId . ' | UFMatch ID: ' . $ufMatchId);
           throw $e;
         }
@@ -750,13 +761,9 @@ class CRM_VitidAuth0_Utils_RoleMapper {
       $sessionHandler = ini_get('session.save_handler');
       
       if (self::isDebugEnabled()) {
-        $sessionSavePath = session_save_path();
-        self::debugLog('VIT ID createUserSession - Session handler: ' . $sessionHandler . ', Save path: ' . ($sessionSavePath ?: 'default'));
-        
-        if ($sessionHandler === 'redis' && $sessionSavePath) {
-          self::debugLog('VIT ID createUserSession - Using Redis session handler: ' . $sessionSavePath);
-        }
-        
+        // Not the save path: for Redis it can contain the password
+        self::debugLog('VIT ID createUserSession - Session handler: ' . $sessionHandler);
+
         // Never log the session ID itself: it is the login credential
         self::debugLog('VIT ID createUserSession - Session ID: ' . (session_id() ? 'SET' : 'NULL'));
       }
