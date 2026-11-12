@@ -52,9 +52,8 @@ class CRM_VitidAuth0_Page_Login extends CRM_Core_Page {
           Civi::log()->debug('VIT ID Login Page - No destination in GET. Fallback to userContext: ' . ($returnUrl ?? 'NULL'));
         }
         
-        if ($returnUrl) {
-          $session->set('vitid_auth0_return_url', $returnUrl);
-        }
+        // Set even when empty, so an abandoned earlier login's URL is not reused
+        $session->set('vitid_auth0_return_url', $returnUrl ?: NULL);
       }
 
       // Get login URL and redirect

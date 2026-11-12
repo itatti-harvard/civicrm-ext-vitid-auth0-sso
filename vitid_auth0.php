@@ -144,7 +144,7 @@ function vitid_auth0_civicrm_uninstall(): void {
     
     // Clean up extension settings directly from database
     CRM_Core_DAO::executeQuery(
-      "DELETE FROM civicrm_setting WHERE name IN ('vitid_auth0_domain', 'vitid_auth0_client_id', 'vitid_auth0_client_secret', 'vitid_auth0_role_mappings')"
+      "DELETE FROM civicrm_setting WHERE name IN ('vitid_auth0_domain', 'vitid_auth0_client_id', 'vitid_auth0_client_secret', 'vitid_auth0_role_mappings', 'vitid_auth0_debug')"
     );
     
     Civi::log()->info('VIT ID Authentication: Extension settings cleaned up on uninstall');

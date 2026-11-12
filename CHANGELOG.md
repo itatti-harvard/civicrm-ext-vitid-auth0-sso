@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Concurrent logins**: Two people starting a VIT ID login at about the same time no longer break each other's login. The Auth0 state, nonce and PKCE verifier were stored under the same fixed keys for everyone, so a second login overwrote the first, and any callback emptied the whole table, failing every other login in progress. Values are now stored per browser (keyed by a random id kept in the CiviCRM session), and clearing them only removes that browser's own values. No database schema change; rows from earlier versions are deleted once they expire.
 - **ID token nonce check**: The callback emptied the store before the ID token was validated, so the nonce check was silently skipped. It now runs.
+- **Login CSRF**: Because the login state was shared by everyone, a callback link from someone else's login could complete in another person's browser and sign them in to the wrong account. The state is now tied to the browser that started the login.
+- **Session fixation**: A successful VIT ID login now issues a new session ID before the session is marked as logged in, as CiviCRM's own Standalone login does. Before, a session ID planted in the browser before login stayed valid afterwards.
+- **Return URL after login**: A return URL such as `/\evil.example/` passed the "same site" check but sends browsers to another site. Only root-relative paths and http(s) URLs on the site's own host are now accepted. The stored return URL is also used only once and is cleared when a login starts without one, so an abandoned login's destination is no longer reused by a later login.
+- **Uninstall**: The `vitid_auth0_debug` setting is now removed along with the other settings.
 - **Logout return URL**: `Auth0Client::getLogoutUrl()` now builds the return URL with `CRM_Utils_System::url()`, like the logout handler in `vitid_auth0.php`. The resulting URL is unchanged.
 
 ### Changed

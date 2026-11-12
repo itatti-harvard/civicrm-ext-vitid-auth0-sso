@@ -14,7 +14,8 @@ use Auth0\SDK\Contract\StoreInterface;
  *
  * A login that comes back to a different hostname than it started on has a
  * different session, finds none of its values, and fails the SDK's state check;
- * the user is sent back to the login page to start again.
+ * the user is sent back to the login page to start again. Two logins started
+ * in tabs of the same browser share one id, so only the later one can finish.
  */
 class CRM_VitidAuth0_Utils_DatabaseStore implements StoreInterface {
 
@@ -62,6 +63,7 @@ class CRM_VitidAuth0_Utils_DatabaseStore implements StoreInterface {
     $this->deferring = $deferring;
 
     if (!$deferring && !empty($this->deferred)) {
+      $this->deleteExpired();
       foreach ($this->deferred as $key => $value) {
         $this->persist($key, $value);
       }
@@ -149,22 +151,18 @@ class CRM_VitidAuth0_Utils_DatabaseStore implements StoreInterface {
       return;
     }
 
+    $this->deleteExpired();
     $this->persist($key, $value);
   }
 
   /**
-   * Persist a value to the database, first deleting any expired rows.
+   * Persist a value to the database.
    *
    * @param string $key
    * @param mixed $value
    */
   private function persist(string $key, $value): void {
     try {
-      CRM_Core_DAO::executeQuery(
-        "DELETE FROM civicrm_vitid_auth0_state WHERE `expire` < %1",
-        [1 => [time(), 'Integer']]
-      );
-
       CRM_Core_DAO::executeQuery(
         "INSERT INTO civicrm_vitid_auth0_state (`key`, `value`, `expire`) VALUES (%1, %2, %3)
          ON DUPLICATE KEY UPDATE `value` = %2, `expire` = %3",
@@ -177,6 +175,22 @@ class CRM_VitidAuth0_Utils_DatabaseStore implements StoreInterface {
     }
     catch (Exception $e) {
       Civi::log()->error('VIT ID DatabaseStore: Error setting key ' . $key . ': ' . $e->getMessage());
+    }
+  }
+
+  /**
+   * Delete every browser's expired rows, such as those of abandoned logins.
+   * Runs whenever values are written, so the table never needs a cron job.
+   */
+  private function deleteExpired(): void {
+    try {
+      CRM_Core_DAO::executeQuery(
+        "DELETE FROM civicrm_vitid_auth0_state WHERE `expire` < %1",
+        [1 => [time(), 'Integer']]
+      );
+    }
+    catch (Exception $e) {
+      Civi::log()->error('VIT ID DatabaseStore: Error deleting expired values: ' . $e->getMessage());
     }
   }
 

@@ -187,23 +187,17 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
       // Using dashboard instead of just /civicrm as it's the standard post-login destination
       $redirectUrl = CRM_Utils_System::url('civicrm/dashboard', '', TRUE, NULL, FALSE);
       
-      // Check if we have a stored return URL
+      // Use the stored return URL once, and only if it points at this site
       $storedReturnUrl = $session->get('vitid_auth0_return_url');
+      $session->set('vitid_auth0_return_url', NULL);
       if (!empty($storedReturnUrl)) {
         if ($debugEnabled) {
           Civi::log()->debug('VIT ID Callback - Found stored return URL: ' . $storedReturnUrl);
         }
-        // Validate URL to prevent open redirect vulnerabilities
-        // Ensure it's a local URL or trusted domain
-        $baseUrl = CRM_Utils_System::url('civicrm', '', TRUE, NULL, FALSE);
-        $baseUrlHost = parse_url($baseUrl, PHP_URL_HOST);
-        $returnUrlHost = parse_url($storedReturnUrl, PHP_URL_HOST);
-        
-        if (empty($returnUrlHost) || $returnUrlHost === $baseUrlHost) {
+        if (self::isLocalUrl($storedReturnUrl)) {
           $redirectUrl = $storedReturnUrl;
-          // Clear the stored URL
-          $session->set('vitid_auth0_return_url', NULL);
-        } else {
+        }
+        else {
           Civi::log()->warning('VIT ID Callback - Ignored potentially unsafe return URL: ' . $storedReturnUrl);
         }
       }
@@ -250,5 +244,32 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
 
     // This should never be reached, but included for safety
     parent::run();
+  }
+
+  /**
+   * Whether a post-login return URL stays on this site: a root-relative path,
+   * or an absolute http(s) URL on the site's own host.
+   *
+   * Backslashes and control characters are refused outright: browsers read
+   * "/\evil.example" as "//evil.example", while parse_url() sees no host.
+   *
+   * @param string $url
+   * @return bool
+   */
+  private static function isLocalUrl($url) {
+    if (!is_string($url) || $url === '' || preg_match('/[\\\\\x00-\x1F\x7F]/', $url)) {
+      return FALSE;
+    }
+    if ($url[0] === '/') {
+      return !isset($url[1]) || $url[1] !== '/';
+    }
+    $parts = parse_url($url);
+    $siteHost = parse_url(CRM_Utils_System::url('civicrm', '', TRUE, NULL, FALSE), PHP_URL_HOST);
+    return is_array($parts)
+      && in_array(strtolower($parts['scheme'] ?? ''), ['http', 'https'], TRUE)
+      && !empty($parts['host'])
+      && strcasecmp($parts['host'], (string) $siteHost) === 0
+      && !isset($parts['user'])
+      && !isset($parts['pass']);
   }
 }

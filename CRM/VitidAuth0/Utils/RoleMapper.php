@@ -763,6 +763,10 @@ class CRM_VitidAuth0_Utils_RoleMapper {
         }
       }
       
+      // Issue a new session ID before the session becomes authenticated, so an
+      // ID planted before login cannot be reused (same as core's Standalone login).
+      session_regenerate_id(FALSE);
+
       // Set session variables
       $session->set('userID', $contactId);
       $session->set('ufID', $ufID);
