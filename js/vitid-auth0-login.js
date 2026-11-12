@@ -9,6 +9,16 @@
 (function($) {
   'use strict';
 
+  // The stylesheet hides the standard login fields only while this class is set.
+  // Set it now to avoid a flash of the form; remove it if the button cannot be
+  // added, so the standard form stays usable.
+  document.documentElement.classList.add('vitid-auth0-active');
+
+  function giveUp(reason) {
+    console.error('VIT ID Auth0: ' + reason + '; showing the standard login form');
+    document.documentElement.classList.remove('vitid-auth0-active');
+  }
+
   /**
    * Wait for Angular module to be ready
    */
@@ -36,6 +46,9 @@
       
       if (attempts < maxAttempts) {
         setTimeout(checkAngular, 100);
+      }
+      else {
+        giveUp('login module not found');
       }
     }
     
@@ -77,6 +90,9 @@
       if (attempts < maxAttempts) {
         setTimeout(checkForm, 100);
       }
+      else {
+        giveUp('login form not found');
+      }
     }
     
     checkForm();
@@ -98,7 +114,7 @@
     }
     
     if (!loginUrl) {
-      console.error('VIT ID Auth0: Login URL not found in CRM.vars');
+      giveUp('login URL not found in CRM.vars');
       return;
     }
     

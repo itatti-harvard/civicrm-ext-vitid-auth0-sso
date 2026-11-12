@@ -322,7 +322,7 @@ function vitid_auth0_civicrm_pageRun(&$page) {
       
       // Log destination detection for debugging
       if (Civi::settings()->get('vitid_auth0_debug')) {
-        Civi::log()->debug('VIT ID PageRun - Detecting destination on login page. GET[destination]: ' . json_encode($_GET['destination'] ?? NULL) . ', Request::retrieve: ' . json_encode($destination));
+        Civi::log()->debug('VIT ID PageRun - Detecting destination on login page. GET[destination]: ' . json_encode($_GET['destination'] ?? NULL, JSON_INVALID_UTF8_SUBSTITUTE) . ', Request::retrieve: ' . json_encode($destination, JSON_INVALID_UTF8_SUBSTITUTE));
       }
       
       // Fallback: If no destination param, but we are on a protected page (not login page),
@@ -337,7 +337,7 @@ function vitid_auth0_civicrm_pageRun(&$page) {
           
           $destination = $requestUri;
           if (Civi::settings()->get('vitid_auth0_debug')) {
-            Civi::log()->debug('VIT ID PageRun - Using current URI as destination: ' . json_encode($destination));
+            Civi::log()->debug('VIT ID PageRun - Using current URI as destination: ' . json_encode($destination, JSON_INVALID_UTF8_SUBSTITUTE));
           }
         }
       }

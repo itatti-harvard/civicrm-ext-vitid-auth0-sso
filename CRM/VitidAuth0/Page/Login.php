@@ -34,7 +34,7 @@ class CRM_VitidAuth0_Page_Login extends CRM_Core_Page {
         
         // Log destination detection for debugging
         if (Civi::settings()->get('vitid_auth0_debug')) {
-          Civi::log()->debug('VIT ID Login Page - Found destination in GET: ' . json_encode($returnUrl));
+          Civi::log()->debug('VIT ID Login Page - Found destination in GET: ' . json_encode($returnUrl, JSON_INVALID_UTF8_SUBSTITUTE));
         }
         
         // If it's a relative path (not starting with http and not starting with /), make it absolute

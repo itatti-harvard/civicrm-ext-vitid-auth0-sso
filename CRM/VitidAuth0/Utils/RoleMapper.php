@@ -691,6 +691,7 @@ class CRM_VitidAuth0_Utils_RoleMapper {
         // sign-ins of the same user at once cannot end with both sets of roles, and a
         // failed insert does not leave the user with none.
         $transaction = new CRM_Core_Transaction();
+        $civiRoles = array_unique(array_map('intval', $civiRoles));
         try {
           CRM_Core_DAO::executeQuery(
             "SELECT id FROM civicrm_uf_match WHERE id = %1 FOR UPDATE",
@@ -705,31 +706,16 @@ class CRM_VitidAuth0_Utils_RoleMapper {
 
           self::debugLog('VIT ID createUserSession - Assigning roles: ' . json_encode($civiRoles) . ' to user_id: ' . $ufMatchId);
 
-          // Insert new role assignments using INSERT IGNORE to handle race conditions
-          // This prevents duplicate key errors if DELETE didn't complete or concurrent requests occur
+          // Plain INSERT: the lock above serializes sign-ins and the roles are
+          // de-duplicated, so any failure is real and rolls the replacement back.
           foreach ($civiRoles as $roleId) {
-            try {
-              CRM_Core_DAO::executeQuery(
-                "INSERT IGNORE INTO civicrm_user_role (user_id, role_id) VALUES (%1, %2)",
-                [
-                  1 => [$ufMatchId, 'Integer'],
-                  2 => [$roleId, 'Integer'],
-                ]
-              );
-            } catch (\Exception $e) {
-              // If INSERT IGNORE still fails (shouldn't happen, but handle gracefully)
-              $errorMessage = $e->getMessage();
-              if (stripos($errorMessage, 'already exists') !== FALSE || 
-                  stripos($errorMessage, 'duplicate') !== FALSE ||
-                  stripos($errorMessage, 'unique constraint') !== FALSE) {
-                // Role already exists, which is fine - log and continue
-                self::debugLog('VIT ID createUserSession - Role ' . $roleId . ' already assigned to user_id ' . $ufMatchId . ', skipping');
-              } else {
-                // Unexpected error, log and rethrow
-                Civi::log()->error('VIT ID createUserSession - Error inserting role ' . $roleId . ' for user_id ' . $ufMatchId . ': ' . $errorMessage);
-                throw $e;
-              }
-            }
+            CRM_Core_DAO::executeQuery(
+              "INSERT INTO civicrm_user_role (user_id, role_id) VALUES (%1, %2)",
+              [
+                1 => [$ufMatchId, 'Integer'],
+                2 => [$roleId, 'Integer'],
+              ]
+            );
           }
 
           // Verify roles were assigned

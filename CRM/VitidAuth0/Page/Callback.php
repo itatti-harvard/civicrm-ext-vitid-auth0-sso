@@ -35,7 +35,7 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
               if (preg_match('/^[a-f0-9]+$/i', $value)) {
                 $params[$param] = $value;
               } else {
-                Civi::log()->warning('VIT ID Callback - Invalid state parameter format: ' . json_encode(substr($value, 0, 50)));
+                Civi::log()->warning('VIT ID Callback - Invalid state parameter format: ' . json_encode(substr($value, 0, 50), JSON_INVALID_UTF8_SUBSTITUTE));
                 throw new Exception('Invalid state parameter format.');
               }
             } elseif ($param === 'code' && !empty($value)) {
@@ -43,7 +43,7 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
               if (preg_match('/^[A-Za-z0-9\-_]+$/', $value)) {
                 $params[$param] = $value;
               } else {
-                Civi::log()->warning('VIT ID Callback - Invalid code parameter format: ' . json_encode(substr($value, 0, 50)));
+                Civi::log()->warning('VIT ID Callback - Invalid code parameter format: ' . json_encode(substr($value, 0, 50), JSON_INVALID_UTF8_SUBSTITUTE));
                 throw new Exception('Invalid authorization code format.');
               }
             } elseif (in_array($param, ['error', 'error_description'])) {
@@ -198,13 +198,13 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
       $session->set('vitid_auth0_return_url', NULL);
       if (!empty($storedReturnUrl)) {
         if ($debugEnabled) {
-          Civi::log()->debug('VIT ID Callback - Found stored return URL: ' . json_encode($storedReturnUrl));
+          Civi::log()->debug('VIT ID Callback - Found stored return URL: ' . json_encode($storedReturnUrl, JSON_INVALID_UTF8_SUBSTITUTE));
         }
         if (self::isLocalUrl($storedReturnUrl)) {
           $redirectUrl = $storedReturnUrl;
         }
         else {
-          Civi::log()->warning('VIT ID Callback - Ignored potentially unsafe return URL: ' . json_encode($storedReturnUrl));
+          Civi::log()->warning('VIT ID Callback - Ignored potentially unsafe return URL: ' . json_encode($storedReturnUrl, JSON_INVALID_UTF8_SUBSTITUTE));
         }
       }
       
