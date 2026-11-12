@@ -82,29 +82,33 @@ form[id="Login"].show-standard-form ~ .vitid-auth0-login .vitid-auth0-button {
   font-size: 18px;
 }
 
+/* The fields are hidden only while html.vitid-auth0-active is set: the script sets it
+   as soon as it loads and removes it if it cannot add the VIT ID button, so the
+   standard form stays usable when the script fails. */
+
 /* DO NOT hide entire form - we need to keep logo and VIT ID button visible */
 /* Only hide form fields, not the form container itself */
 
 /* PRIMARY METHOD: Hide input-wrapper divs and login-or-forgot div (works regardless of form ID) */
-form:not(.show-standard-form) .input-wrapper {
+html.vitid-auth0-active form:not(.show-standard-form) .input-wrapper {
   display: none !important;
   visibility: hidden !important;
 }
 
-form:not(.show-standard-form) .login-or-forgot {
+html.vitid-auth0-active form:not(.show-standard-form) .login-or-forgot {
   display: none !important;
   visibility: hidden !important;
 }
 
 /* Angular-specific: Hide form fields in standalone-auth-form container */
-.standalone-auth-form form:not(.show-standard-form) .input-wrapper,
-.standalone-auth-form form:not(.show-standard-form) input[name="name"],
-.standalone-auth-form form:not(.show-standard-form) input[name="pass"],
-.standalone-auth-form form:not(.show-standard-form) input[type="password"],
-.standalone-auth-form form:not(.show-standard-form) button[type="submit"],
-.standalone-auth-form form:not(.show-standard-form) input[type="submit"],
-.standalone-auth-form form:not(.show-standard-form) a[href*="forgot"],
-.standalone-auth-form form:not(.show-standard-form) a[href*="password"] {
+html.vitid-auth0-active .standalone-auth-form form:not(.show-standard-form) .input-wrapper,
+html.vitid-auth0-active .standalone-auth-form form:not(.show-standard-form) input[name="name"],
+html.vitid-auth0-active .standalone-auth-form form:not(.show-standard-form) input[name="pass"],
+html.vitid-auth0-active .standalone-auth-form form:not(.show-standard-form) input[type="password"],
+html.vitid-auth0-active .standalone-auth-form form:not(.show-standard-form) button[type="submit"],
+html.vitid-auth0-active .standalone-auth-form form:not(.show-standard-form) input[type="submit"],
+html.vitid-auth0-active .standalone-auth-form form:not(.show-standard-form) a[href*="forgot"],
+html.vitid-auth0-active .standalone-auth-form form:not(.show-standard-form) a[href*="password"] {
   display: none !important;
   visibility: hidden !important;
 }
@@ -141,84 +145,84 @@ form.show-standard-form .login-or-forgot input[type="submit"] {
 }
 
 /* FALLBACK: Hide standard login form fields by default - More comprehensive selectors (backup) */
-form#Login:not(.show-standard-form) input[type="text"],
-form#Login:not(.show-standard-form) input[type="email"],
-form#Login:not(.show-standard-form) input[type="password"],
-form#Login:not(.show-standard-form) input[name="name"],
-form#Login:not(.show-standard-form) input[name="pass"],
-form#Login:not(.show-standard-form) input[name="username"],
-form#Login:not(.show-standard-form) input[name="password"],
-form[id="Login"]:not(.show-standard-form) input[type="text"],
-form[id="Login"]:not(.show-standard-form) input[type="email"],
-form[id="Login"]:not(.show-standard-form) input[type="password"],
-form[id="Login"]:not(.show-standard-form) input[name="name"],
-form[id="Login"]:not(.show-standard-form) input[name="pass"],
-form[id="Login"]:not(.show-standard-form) input[name="username"],
-form[id="Login"]:not(.show-standard-form) input[name="password"],
-form:not(.show-standard-form) input[type="text"][name*="name"],
-form:not(.show-standard-form) input[type="password"][name*="pass"] {
+html.vitid-auth0-active form#Login:not(.show-standard-form) input[type="text"],
+html.vitid-auth0-active form#Login:not(.show-standard-form) input[type="email"],
+html.vitid-auth0-active form#Login:not(.show-standard-form) input[type="password"],
+html.vitid-auth0-active form#Login:not(.show-standard-form) input[name="name"],
+html.vitid-auth0-active form#Login:not(.show-standard-form) input[name="pass"],
+html.vitid-auth0-active form#Login:not(.show-standard-form) input[name="username"],
+html.vitid-auth0-active form#Login:not(.show-standard-form) input[name="password"],
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) input[type="text"],
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) input[type="email"],
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) input[type="password"],
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) input[name="name"],
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) input[name="pass"],
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) input[name="username"],
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) input[name="password"],
+html.vitid-auth0-active form:not(.show-standard-form) input[type="text"][name*="name"],
+html.vitid-auth0-active form:not(.show-standard-form) input[type="password"][name*="pass"] {
   display: none !important;
 }
 
 /* Hide labels for username and password fields */
-form#Login:not(.show-standard-form) label[for*="name"],
-form#Login:not(.show-standard-form) label[for*="pass"],
-form#Login:not(.show-standard-form) label:has(+ input[name="name"]),
-form#Login:not(.show-standard-form) label:has(+ input[name="pass"]),
-form[id="Login"]:not(.show-standard-form) label[for*="name"],
-form[id="Login"]:not(.show-standard-form) label[for*="pass"],
-form[id="Login"]:not(.show-standard-form) label:has(+ input[name="name"]),
-form[id="Login"]:not(.show-standard-form) label:has(+ input[name="pass"]) {
+html.vitid-auth0-active form#Login:not(.show-standard-form) label[for*="name"],
+html.vitid-auth0-active form#Login:not(.show-standard-form) label[for*="pass"],
+html.vitid-auth0-active form#Login:not(.show-standard-form) label:has(+ input[name="name"]),
+html.vitid-auth0-active form#Login:not(.show-standard-form) label:has(+ input[name="pass"]),
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) label[for*="name"],
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) label[for*="pass"],
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) label:has(+ input[name="name"]),
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) label:has(+ input[name="pass"]) {
   display: none !important;
 }
 
 /* Hide form sections/rows containing username/password - More aggressive hiding */
-form#Login:not(.show-standard-form) .crm-section:has(input[name="name"]),
-form#Login:not(.show-standard-form) .crm-section:has(input[name="pass"]),
-form#Login:not(.show-standard-form) .crm-section:has(input[name="username"]),
-form#Login:not(.show-standard-form) .crm-section:has(input[name="password"]),
-form#Login:not(.show-standard-form) tr:has(input[name="name"]),
-form#Login:not(.show-standard-form) tr:has(input[name="pass"]),
-form#Login:not(.show-standard-form) tr:has(input[name="username"]),
-form#Login:not(.show-standard-form) tr:has(input[name="password"]),
-form#Login:not(.show-standard-form) .crm-form-block > div:has(input[name="name"]),
-form#Login:not(.show-standard-form) .crm-form-block > div:has(input[name="pass"]),
-form[id="Login"]:not(.show-standard-form) .crm-section:has(input[name="name"]),
-form[id="Login"]:not(.show-standard-form) .crm-section:has(input[name="pass"]),
-form[id="Login"]:not(.show-standard-form) .crm-section:has(input[name="username"]),
-form[id="Login"]:not(.show-standard-form) .crm-section:has(input[name="password"]),
-form[id="Login"]:not(.show-standard-form) tr:has(input[name="name"]),
-form[id="Login"]:not(.show-standard-form) tr:has(input[name="pass"]),
-form[id="Login"]:not(.show-standard-form) tr:has(input[name="username"]),
-form[id="Login"]:not(.show-standard-form) tr:has(input[name="password"]),
-form[id="Login"]:not(.show-standard-form) .crm-form-block > div:has(input[name="name"]),
-form[id="Login"]:not(.show-standard-form) .crm-form-block > div:has(input[name="pass"]) {
+html.vitid-auth0-active form#Login:not(.show-standard-form) .crm-section:has(input[name="name"]),
+html.vitid-auth0-active form#Login:not(.show-standard-form) .crm-section:has(input[name="pass"]),
+html.vitid-auth0-active form#Login:not(.show-standard-form) .crm-section:has(input[name="username"]),
+html.vitid-auth0-active form#Login:not(.show-standard-form) .crm-section:has(input[name="password"]),
+html.vitid-auth0-active form#Login:not(.show-standard-form) tr:has(input[name="name"]),
+html.vitid-auth0-active form#Login:not(.show-standard-form) tr:has(input[name="pass"]),
+html.vitid-auth0-active form#Login:not(.show-standard-form) tr:has(input[name="username"]),
+html.vitid-auth0-active form#Login:not(.show-standard-form) tr:has(input[name="password"]),
+html.vitid-auth0-active form#Login:not(.show-standard-form) .crm-form-block > div:has(input[name="name"]),
+html.vitid-auth0-active form#Login:not(.show-standard-form) .crm-form-block > div:has(input[name="pass"]),
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) .crm-section:has(input[name="name"]),
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) .crm-section:has(input[name="pass"]),
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) .crm-section:has(input[name="username"]),
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) .crm-section:has(input[name="password"]),
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) tr:has(input[name="name"]),
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) tr:has(input[name="pass"]),
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) tr:has(input[name="username"]),
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) tr:has(input[name="password"]),
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) .crm-form-block > div:has(input[name="name"]),
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) .crm-form-block > div:has(input[name="pass"]) {
   display: none !important;
 }
 
 /* Hide form rows/sections more aggressively - fallback for browsers without :has() support */
-form#Login:not(.show-standard-form) tr td:has(input[name="name"]),
-form#Login:not(.show-standard-form) tr td:has(input[name="pass"]),
-form[id="Login"]:not(.show-standard-form) tr td:has(input[name="name"]),
-form[id="Login"]:not(.show-standard-form) tr td:has(input[name="pass"]) {
+html.vitid-auth0-active form#Login:not(.show-standard-form) tr td:has(input[name="name"]),
+html.vitid-auth0-active form#Login:not(.show-standard-form) tr td:has(input[name="pass"]),
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) tr td:has(input[name="name"]),
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) tr td:has(input[name="pass"]) {
   display: none !important;
 }
 
 /* Hide standard login button by default */
-form#Login:not(.show-standard-form) button[type="submit"],
-form#Login:not(.show-standard-form) input[type="submit"],
-form#Login:not(.show-standard-form) .crm-submit-buttons,
-form[id="Login"]:not(.show-standard-form) button[type="submit"],
-form[id="Login"]:not(.show-standard-form) input[type="submit"],
-form[id="Login"]:not(.show-standard-form) .crm-submit-buttons {
+html.vitid-auth0-active form#Login:not(.show-standard-form) button[type="submit"],
+html.vitid-auth0-active form#Login:not(.show-standard-form) input[type="submit"],
+html.vitid-auth0-active form#Login:not(.show-standard-form) .crm-submit-buttons,
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) button[type="submit"],
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) input[type="submit"],
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) .crm-submit-buttons {
   display: none !important;
 }
 
 /* Hide "Forgotten password" link by default */
-form#Login:not(.show-standard-form) a[href*="forgot"],
-form#Login:not(.show-standard-form) a[href*="password"],
-form[id="Login"]:not(.show-standard-form) a[href*="forgot"],
-form[id="Login"]:not(.show-standard-form) a[href*="password"] {
+html.vitid-auth0-active form#Login:not(.show-standard-form) a[href*="forgot"],
+html.vitid-auth0-active form#Login:not(.show-standard-form) a[href*="password"],
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) a[href*="forgot"],
+html.vitid-auth0-active form[id="Login"]:not(.show-standard-form) a[href*="password"] {
   display: none !important;
 }
 

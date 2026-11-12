@@ -29,12 +29,12 @@ class CRM_VitidAuth0_Page_Login extends CRM_Core_Page {
       $session = CRM_Core_Session::singleton();
       
       // Check for explicit destination parameter first
-      if (!empty($_GET['destination'])) {
+      if (!empty($_GET['destination']) && is_string($_GET['destination'])) {
         $returnUrl = $_GET['destination'];
         
         // Log destination detection for debugging
         if (Civi::settings()->get('vitid_auth0_debug')) {
-          Civi::log()->debug('VIT ID Login Page - Found destination in GET: ' . $returnUrl);
+          Civi::log()->debug('VIT ID Login Page - Found destination in GET: ' . json_encode($returnUrl, JSON_INVALID_UTF8_SUBSTITUTE));
         }
         
         // If it's a relative path (not starting with http and not starting with /), make it absolute
@@ -52,9 +52,8 @@ class CRM_VitidAuth0_Page_Login extends CRM_Core_Page {
           Civi::log()->debug('VIT ID Login Page - No destination in GET. Fallback to userContext: ' . ($returnUrl ?? 'NULL'));
         }
         
-        if ($returnUrl) {
-          $session->set('vitid_auth0_return_url', $returnUrl);
-        }
+        // Set even when empty, so an abandoned earlier login's URL is not reused
+        $session->set('vitid_auth0_return_url', $returnUrl ?: NULL);
       }
 
       // Get login URL and redirect

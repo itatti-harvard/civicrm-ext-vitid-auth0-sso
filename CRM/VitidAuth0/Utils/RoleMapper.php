@@ -687,7 +687,17 @@ class CRM_VitidAuth0_Utils_RoleMapper {
       // Assign roles to user via civicrm_user_role table
       // The user_id in civicrm_user_role is the UFMatch.id (not contact_id)
       if (!empty($civiRoles) && !empty($ufMatchId)) {
+        // Replace the roles in one transaction, locking the user's row first, so two
+        // sign-ins of the same user at once cannot end with both sets of roles, and a
+        // failed insert does not leave the user with none.
+        $transaction = new CRM_Core_Transaction();
+        $civiRoles = array_values(array_unique(array_map('intval', $civiRoles)));
         try {
+          CRM_Core_DAO::executeQuery(
+            "SELECT id FROM civicrm_uf_match WHERE id = %1 FOR UPDATE",
+            [1 => [$ufMatchId, 'Integer']]
+          );
+
           // Delete existing roles for this user
           CRM_Core_DAO::executeQuery(
             "DELETE FROM civicrm_user_role WHERE user_id = %1",
@@ -696,31 +706,16 @@ class CRM_VitidAuth0_Utils_RoleMapper {
 
           self::debugLog('VIT ID createUserSession - Assigning roles: ' . json_encode($civiRoles) . ' to user_id: ' . $ufMatchId);
 
-          // Insert new role assignments using INSERT IGNORE to handle race conditions
-          // This prevents duplicate key errors if DELETE didn't complete or concurrent requests occur
+          // Plain INSERT: the lock above serializes sign-ins and the roles are
+          // de-duplicated, so any failure is real and rolls the replacement back.
           foreach ($civiRoles as $roleId) {
-            try {
-              CRM_Core_DAO::executeQuery(
-                "INSERT IGNORE INTO civicrm_user_role (user_id, role_id) VALUES (%1, %2)",
-                [
-                  1 => [$ufMatchId, 'Integer'],
-                  2 => [$roleId, 'Integer'],
-                ]
-              );
-            } catch (\Exception $e) {
-              // If INSERT IGNORE still fails (shouldn't happen, but handle gracefully)
-              $errorMessage = $e->getMessage();
-              if (stripos($errorMessage, 'already exists') !== FALSE || 
-                  stripos($errorMessage, 'duplicate') !== FALSE ||
-                  stripos($errorMessage, 'unique constraint') !== FALSE) {
-                // Role already exists, which is fine - log and continue
-                self::debugLog('VIT ID createUserSession - Role ' . $roleId . ' already assigned to user_id ' . $ufMatchId . ', skipping');
-              } else {
-                // Unexpected error, log and rethrow
-                Civi::log()->error('VIT ID createUserSession - Error inserting role ' . $roleId . ' for user_id ' . $ufMatchId . ': ' . $errorMessage);
-                throw $e;
-              }
-            }
+            CRM_Core_DAO::executeQuery(
+              "INSERT INTO civicrm_user_role (user_id, role_id) VALUES (%1, %2)",
+              [
+                1 => [$ufMatchId, 'Integer'],
+                2 => [$roleId, 'Integer'],
+              ]
+            );
           }
 
           // Verify roles were assigned
@@ -734,7 +729,9 @@ class CRM_VitidAuth0_Utils_RoleMapper {
           }
           self::debugLog('VIT ID createUserSession - Successfully assigned roles: ' . json_encode($assignedRoles));
 
+          $transaction->commit();
         } catch (\Exception $e) {
+          $transaction->rollback();
           Civi::log()->error('VIT ID createUserSession - Error assigning roles: ' . $e->getMessage() . ' | Contact ID: ' . $contactId . ' | UFMatch ID: ' . $ufMatchId);
           throw $e;
         }
@@ -750,19 +747,17 @@ class CRM_VitidAuth0_Utils_RoleMapper {
       $sessionHandler = ini_get('session.save_handler');
       
       if (self::isDebugEnabled()) {
-        $sessionSavePath = session_save_path();
-        self::debugLog('VIT ID createUserSession - Session handler: ' . $sessionHandler . ', Save path: ' . ($sessionSavePath ?: 'default'));
-        
-        if ($sessionHandler === 'redis' && $sessionSavePath) {
-          self::debugLog('VIT ID createUserSession - Using Redis session handler: ' . $sessionSavePath);
-        }
-        
-        $currentSessionId = session_id();
-        if (!empty($currentSessionId)) {
-          self::debugLog('VIT ID createUserSession - Session ID: ' . $currentSessionId);
-        }
+        // Not the save path: for Redis it can contain the password
+        self::debugLog('VIT ID createUserSession - Session handler: ' . $sessionHandler);
+
+        // Never log the session ID itself: it is the login credential
+        self::debugLog('VIT ID createUserSession - Session ID: ' . (session_id() ? 'SET' : 'NULL'));
       }
       
+      // Issue a new session ID before the session becomes authenticated, so an
+      // ID planted before login cannot be reused (same as core's Standalone login).
+      session_regenerate_id(FALSE);
+
       // Set session variables
       $session->set('userID', $contactId);
       $session->set('ufID', $ufID);
@@ -777,8 +772,7 @@ class CRM_VitidAuth0_Utils_RoleMapper {
       
       // Verify session data was set correctly
       if (self::isDebugEnabled() && isset($_SESSION['CiviCRM'])) {
-        $sessionId = session_id();
-        self::debugLog('VIT ID createUserSession - Session ID: ' . ($sessionId ?: 'NULL') . ', CiviCRM session keys: ' . json_encode(array_keys($_SESSION['CiviCRM'])));
+        self::debugLog('VIT ID createUserSession - Session ID: ' . (session_id() ? 'SET' : 'NULL') . ', CiviCRM session keys: ' . json_encode(array_keys($_SESSION['CiviCRM'])));
       }
 
       // Verify session was set correctly (always log this, not just debug mode)
@@ -867,6 +861,21 @@ class CRM_VitidAuth0_Utils_RoleMapper {
       }
       
       self::debugLog('VIT ID validateUser - Contact validated: ' . $contact['display_name']);
+
+      // A CiviCRM user an administrator has disabled must not get in through
+      // VIT ID either. A contact with no user yet is fine: one is created at login.
+      $user = \Civi\Api4\User::get(FALSE)
+        ->addSelect('id', 'is_active')
+        ->addWhere('contact_id', '=', $userData['civicrm_id'])
+        ->execute()
+        ->first();
+      if ($user && empty($user['is_active'])) {
+        Civi::log()->warning('VIT ID validateUser - Refused login: CiviCRM user ' . $user['id'] . ' for contact ID ' . $userData['civicrm_id'] . ' is disabled');
+        return [
+          'valid' => FALSE,
+          'error' => 'Your CiviCRM account has been disabled. Please contact your administrator.',
+        ];
+      }
 
     } catch (\Exception $e) {
       Civi::log()->error('Contact validation error: ' . $e->getMessage());

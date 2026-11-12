@@ -5,6 +5,40 @@ All notable changes to the VIT ID Authentication extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.7] - 12 November 2026
+
+### Fixed
+
+- **Concurrent logins**: Two people starting a VIT ID login at about the same time no longer break each other's login. The Auth0 state, nonce and PKCE verifier were stored under the same fixed keys for everyone, so a second login overwrote the first, and any callback emptied the whole table, failing every other login in progress. Values are now stored per browser (keyed by a random id kept in the CiviCRM session), and clearing them only removes that browser's own values. No database schema change; rows from earlier versions are deleted once they expire.
+- **ID token nonce check**: The callback emptied the store before the ID token was validated, so the nonce check was silently skipped. It now runs.
+- **Login CSRF**: Because the login state was shared by everyone, a callback link from someone else's login could complete in another person's browser and sign them in to the wrong account. The state is now tied to the browser that started the login, and the browser id is replaced at sign-in, so the session from before sign-in cannot feed login state into the signed-in one.
+- **Session fixation**: A successful VIT ID login now issues a new session ID before the session is marked as logged in, as CiviCRM's own Standalone login does. Before, a session ID planted in the browser before login stayed valid afterwards.
+- **Return URL after login**: A return URL such as `/\evil.example/` passed the "same site" check but sends browsers to another site. Only root-relative paths and http(s) URLs on the site's own host are now accepted. The stored return URL is also used only once and is cleared when a login starts without one, so an abandoned login's destination is no longer reused by a later login.
+- **Disabled accounts**: A CiviCRM user an administrator has disabled can no longer log in through VIT ID. They see "Your CiviCRM account has been disabled. Please contact your administrator." on the login page.
+- **Uninstall**: The `vitid_auth0_debug` setting is now removed along with the other settings.
+- **Roles at sign-in**: If no CiviCRM role can be mapped at the moment of sign-in (a mapping removed during the login, or the lookup failed), the sign-in is refused with the usual "required permissions" message. Before, the person was signed in with whatever roles they had previously.
+- **Login page button**: On a slow page load the VIT ID button could fail to appear, because the script stopped retrying when CiviCRM's login module was not registered yet. If the button still cannot be added (or adding it fails), the standard username and password form is now shown instead of a login page with neither.
+- **Login link with a malformed destination**: `?destination[]=…` caused a server error on the VIT ID login route; it is now ignored.
+- **Log entries**: Return addresses, the error text Auth0 sends back to the callback, malformed `state`/`code` values and the login page's destination are logged JSON-encoded (invalid UTF-8 replaced, not dropped), and line breaks in callback error messages are replaced with spaces, so a crafted link cannot add fake lines to the CiviCRM log. Debug logging no longer writes the session save path, which for Redis can contain its password.
+- **Role update at sign-in**: The user's roles are now replaced in one database transaction, with the user locked first. Two sign-ins of the same user at the same moment could end with the roles of both, and a failure halfway could leave the user with no roles; a role that cannot be saved (for example one deleted during the sign-in) now cancels the sign-in instead of being skipped.
+- **Session ID in the log**: The callback no longer writes the logged-in session ID to the CiviCRM log on every login (and debug logging no longer writes it either). Anyone who could read the log could have used it to act as that user.
+- **Settings page shows the client secret**: The saved Auth0 client secret was written into the settings page's HTML. The field is now empty; leave it empty to keep the saved secret, or enter a new one to replace it.
+- **Duplicate role mapping**: Adding an Auth0 role that is already mapped showed a raw database error. It now says the role is already mapped and how to change it. Other errors on the role mapping list no longer show database messages either.
+- **Custom Auth0 domains**: The Auth0 domain field only accepted `*.auth0.com`, so a custom domain such as `login.example.org` could not be saved. Any domain name is now accepted, still without `https://`.
+- **Logout return URL**: `Auth0Client::getLogoutUrl()` now builds the return URL with `CRM_Utils_System::url()`, like the logout handler in `vitid_auth0.php`. The resulting URL is unchanged.
+
+### Removed
+
+- `sql/auto_install.sql`, which described an obsolete layout of `civicrm_vitid_auth0_state` and was never run; the install hook creates the tables.
+- The `hook_civicrm_checkAccess()` implementation, which CiviCRM Standalone never calls; the VIT ID routes are public through `*always allow*` in the menu file.
+
+### Changed
+
+- **Token storage**: The Auth0 SDK's own session (user profile, ID and access tokens) is now kept in memory for the callback request only, instead of in the shared database table. The extension never read it on later requests; CiviCRM's session takes over after login.
+- **Expired state cleanup**: Expired rows are deleted every time a login stores its values, instead of on a random 1% of reads.
+- **Different hostname**: A login that starts on one hostname and returns to another (for example while both an old and a new address are served) no longer finds its values. It returns to the login page with "Your VIT ID sign-in expired or was started in another window. Please sign in again.", and signing in again works.
+- **Expired or interrupted sign-in**: A sign-in that cannot be finished because it was started in another window, on the other hostname, or left on the VIT ID page for over an hour now asks the person to sign in again, instead of showing the generic authentication error. If the sign-in values cannot be saved at all (a database problem), the login now stops at the start with the usual error, instead of sending the person to VIT ID and then asking them to sign in again.
+
 ## [1.9.6] - 22 September 2026
 
 ### Changed

@@ -9,6 +9,16 @@
 (function($) {
   'use strict';
 
+  // The stylesheet hides the standard login fields only while this class is set.
+  // Set it now to avoid a flash of the form; remove it if the button cannot be
+  // added, so the standard form stays usable.
+  document.documentElement.classList.add('vitid-auth0-active');
+
+  function giveUp(reason) {
+    console.error('VIT ID Auth0: ' + reason + '; showing the standard login form');
+    document.documentElement.classList.remove('vitid-auth0-active');
+  }
+
   /**
    * Wait for Angular module to be ready
    */
@@ -19,16 +29,26 @@
     function checkAngular() {
       attempts++;
       
-      // Check if Angular is loaded and crmLogin module is available
-      if (typeof angular !== 'undefined' && 
-          angular.module && 
-          angular.module('crmLogin')) {
+      // Check if Angular is loaded and crmLogin module is available.
+      // angular.module(name) throws while the module is not registered yet,
+      // which must not end the retries.
+      var ready = false;
+      try {
+        ready = typeof angular !== 'undefined' && !!angular.module && !!angular.module('crmLogin');
+      }
+      catch (e) {
+        ready = false;
+      }
+      if (ready) {
         callback();
         return;
       }
       
       if (attempts < maxAttempts) {
         setTimeout(checkAngular, 100);
+      }
+      else {
+        giveUp('login module not found');
       }
     }
     
@@ -70,6 +90,9 @@
       if (attempts < maxAttempts) {
         setTimeout(checkForm, 100);
       }
+      else {
+        giveUp('login form not found');
+      }
     }
     
     checkForm();
@@ -91,7 +114,7 @@
     }
     
     if (!loginUrl) {
-      console.error('VIT ID Auth0: Login URL not found in CRM.vars');
+      giveUp('login URL not found in CRM.vars');
       return;
     }
     
@@ -360,8 +383,12 @@
     waitForAngular(function() {
       // Wait for login form to be rendered
       waitForLoginForm(function(form) {
-        // Inject VIT ID button
-        injectVitIdButton(form);
+        try {
+          injectVitIdButton(form);
+        }
+        catch (e) {
+          giveUp('VIT ID button could not be added (' + e.message + ')');
+        }
       });
     });
   }
