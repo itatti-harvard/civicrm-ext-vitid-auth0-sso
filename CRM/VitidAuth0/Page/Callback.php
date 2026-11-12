@@ -234,10 +234,18 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
       $errorMessage .= ' | Stack trace: ' . $e->getTraceAsString();
       Civi::log()->error($errorMessage);
 
-      // Always show generic error message to users (security best practice)
-      // Full error details are logged above for administrators to review
-      $userErrorMessage = E::ts('An error occurred during VIT ID authentication. Please try again or contact your administrator.');
-      
+      // Show users a generic message; full details are logged above.
+      // A login whose stored state is gone (started in another window or on the
+      // other hostname, or left on the VIT ID page past an hour) just needs a new start.
+      if (self::loginMustRestart($e)) {
+        $userErrorMessage = E::ts('Your VIT ID sign-in expired or was started in another window. Please sign in again.');
+        $userErrorTitle = E::ts('Please Sign In Again');
+      }
+      else {
+        $userErrorMessage = E::ts('An error occurred during VIT ID authentication. Please try again or contact your administrator.');
+        $userErrorTitle = E::ts('VIT ID Authentication Error');
+      }
+
       // In debug mode, log additional context but still don't expose to users
       if ($debugEnabled) {
         Civi::log()->debug('VIT ID Callback - Error details (debug mode): ' . $e->getMessage());
@@ -246,7 +254,7 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
       // Display error on login page
       CRM_Core_Session::setStatus(
         $userErrorMessage,
-        E::ts('VIT ID Authentication Error'),
+        $userErrorTitle,
         'error'
       );
       
@@ -261,6 +269,23 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
 
     // This should never be reached, but included for safety
     parent::run();
+  }
+
+  /**
+   * Whether the callback failed because this browser's stored login values
+   * (state, PKCE verifier, nonce) are missing or belong to another login.
+   *
+   * @param \Throwable $e
+   * @return bool
+   */
+  private static function loginMustRestart(\Throwable $e) {
+    $cause = $e->getPrevious();
+    return $cause instanceof \Auth0\SDK\Exception\StateException
+      && in_array($cause->getMessage(), [
+        \Auth0\SDK\Exception\StateException::MSG_INVALID_STATE,
+        \Auth0\SDK\Exception\StateException::MSG_MISSING_CODE_VERIFIER,
+        \Auth0\SDK\Exception\StateException::MSG_MISSING_NONCE,
+      ], TRUE);
   }
 
   /**

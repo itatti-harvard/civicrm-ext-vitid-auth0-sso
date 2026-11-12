@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Login link with a malformed destination**: `?destination[]=…` caused a server error on the VIT ID login route; it is now ignored.
 - **Log entries**: Return addresses are logged JSON-encoded, so a crafted address cannot add fake lines to the CiviCRM log.
 - **Session ID in the log**: The callback no longer writes the logged-in session ID to the CiviCRM log on every login (and debug logging no longer writes it either). Anyone who could read the log could have used it to act as that user.
+- **Settings page shows the client secret**: The saved Auth0 client secret was written into the settings page's HTML. The field is now empty; leave it empty to keep the saved secret, or enter a new one to replace it.
+- **Duplicate role mapping**: Adding an Auth0 role that is already mapped showed a raw database error. It now says the role is already mapped and how to change it. Other errors on the role mapping list no longer show database messages either.
+- **Custom Auth0 domains**: The Auth0 domain field only accepted `*.auth0.com`, so a custom domain such as `login.example.org` could not be saved. Any domain name is now accepted, still without `https://`.
 - **Logout return URL**: `Auth0Client::getLogoutUrl()` now builds the return URL with `CRM_Utils_System::url()`, like the logout handler in `vitid_auth0.php`. The resulting URL is unchanged.
 
 ### Removed
@@ -32,7 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Token storage**: The Auth0 SDK's own session (user profile, ID and access tokens) is now kept in memory for the callback request only, instead of in the shared database table. The extension never read it on later requests; CiviCRM's session takes over after login.
 - **Expired state cleanup**: Expired rows are deleted every time a login stores its values, instead of on a random 1% of reads.
-- **Different hostname**: A login that starts on one hostname and returns to another (for example while both an old and a new address are served) no longer finds its values. It fails the state check and returns to the login page, where logging in again works.
+- **Different hostname**: A login that starts on one hostname and returns to another (for example while both an old and a new address are served) no longer finds its values. It returns to the login page with "Your VIT ID sign-in expired or was started in another window. Please sign in again.", and signing in again works.
+- **Expired or interrupted sign-in**: A sign-in that cannot be finished because it was started in another window, on the other hostname, or left on the VIT ID page for over an hour now asks the person to sign in again, instead of showing the generic authentication error.
 
 ## [1.9.6] - 22 September 2026
 

@@ -226,7 +226,7 @@ class CRM_VitidAuth0_Utils_Auth0Client {
 
     } catch (\Exception $e) {
       Civi::log()->error('VIT ID callback error: ' . $e->getMessage());
-      throw new \Exception('Failed to complete VIT ID authentication: ' . $e->getMessage());
+      throw new \Exception('Failed to complete VIT ID authentication: ' . $e->getMessage(), 0, $e);
     }
   }
 
