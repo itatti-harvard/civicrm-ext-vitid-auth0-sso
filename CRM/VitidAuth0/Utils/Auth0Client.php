@@ -2,6 +2,7 @@
 
 use Auth0\SDK\Auth0 as Auth0SDK;
 use Auth0\SDK\Configuration\SdkConfiguration;
+use Auth0\SDK\Store\MemoryStore;
 use CRM_VitidAuth0_Utils_DatabaseStore as DatabaseStore;
 
 /**
@@ -86,9 +87,6 @@ class CRM_VitidAuth0_Utils_Auth0Client {
     // Generate a cookie secret based on client secret (deterministic but secure)
     $cookieSecret = hash('sha256', $this->config['clientSecret'] . self::COOKIE_SECRET_SALT);
 
-    // Initialize Database Store
-    $store = new DatabaseStore();
-
     // Initialize Auth0 SDK
     $configuration = new SdkConfiguration([
       'domain' => $this->config['domain'],
@@ -97,9 +95,14 @@ class CRM_VitidAuth0_Utils_Auth0Client {
       'redirectUri' => $callbackUrl,
       'cookieSecret' => $cookieSecret,
       'scope' => ['openid', 'profile', 'email'],
-      // Use our custom database store for state/nonce/pkce
-      'sessionStorage' => $store,
-      'transientStorage' => $store,
+      // State, nonce and PKCE verifier must survive the round trip to Auth0,
+      // so they go in the database, scoped to this browser.
+      'transientStorage' => new DatabaseStore(),
+      // The SDK's own session (user profile and tokens) is only read in the
+      // callback request that creates it; CiviCRM's session takes over from
+      // there. Keeping it in memory means tokens are never written anywhere,
+      // and the SDK clearing it cannot touch the transient values above.
+      'sessionStorage' => new MemoryStore(),
     ]);
 
     $this->auth0 = new Auth0SDK($configuration);
@@ -325,12 +328,9 @@ class CRM_VitidAuth0_Utils_Auth0Client {
    * @return string Logout URL
    */
   public function getLogoutUrl() {
-    // Build return URL - manually construct to avoid CiviCRM standalone URL issues
-    $baseUrl = defined('CIVICRM_UF_BASEURL') ? CIVICRM_UF_BASEURL : \Civi::paths()->getUrl('[civicrm.root]/');
-    $baseUrl = rtrim($baseUrl, '/');
-    $returnTo = $baseUrl . '/civicrm/login?reset=1';
-    
-    // Use SDK to generate logout URL
+    // Same return URL as the logout handler in vitid_auth0.php; it must be
+    // listed in the Auth0 application's Allowed Logout URLs.
+    $returnTo = CRM_Utils_System::url('civicrm/login', 'reset=1', TRUE, NULL, FALSE);
     return $this->auth0->logout($returnTo);
   }
 }

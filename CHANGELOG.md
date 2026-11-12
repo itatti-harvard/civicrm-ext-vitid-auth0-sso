@@ -5,6 +5,20 @@ All notable changes to the VIT ID Authentication extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.7] - 12 November 2026
+
+### Fixed
+
+- **Concurrent logins**: Two people starting a VIT ID login at about the same time no longer break each other's login. The Auth0 state, nonce and PKCE verifier were stored under the same fixed keys for everyone, so a second login overwrote the first, and any callback emptied the whole table, failing every other login in progress. Values are now stored per browser (keyed by a random id kept in the CiviCRM session), and clearing them only removes that browser's own values. No database schema change; rows from earlier versions are deleted once they expire.
+- **ID token nonce check**: The callback emptied the store before the ID token was validated, so the nonce check was silently skipped. It now runs.
+- **Logout return URL**: `Auth0Client::getLogoutUrl()` now builds the return URL with `CRM_Utils_System::url()`, like the logout handler in `vitid_auth0.php`. The resulting URL is unchanged.
+
+### Changed
+
+- **Token storage**: The Auth0 SDK's own session (user profile, ID and access tokens) is now kept in memory for the callback request only, instead of in the shared database table. The extension never read it on later requests; CiviCRM's session takes over after login.
+- **Expired state cleanup**: Expired rows are deleted every time a login stores its values, instead of on a random 1% of reads.
+- **Different hostname**: A login that starts on one hostname and returns to another (for example while both an old and a new address are served) no longer finds its values. It fails the state check and returns to the login page, where logging in again works.
+
 ## [1.9.6] - 22 September 2026
 
 ### Changed
