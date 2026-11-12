@@ -757,10 +757,8 @@ class CRM_VitidAuth0_Utils_RoleMapper {
           self::debugLog('VIT ID createUserSession - Using Redis session handler: ' . $sessionSavePath);
         }
         
-        $currentSessionId = session_id();
-        if (!empty($currentSessionId)) {
-          self::debugLog('VIT ID createUserSession - Session ID: ' . $currentSessionId);
-        }
+        // Never log the session ID itself: it is the login credential
+        self::debugLog('VIT ID createUserSession - Session ID: ' . (session_id() ? 'SET' : 'NULL'));
       }
       
       // Issue a new session ID before the session becomes authenticated, so an
@@ -781,8 +779,7 @@ class CRM_VitidAuth0_Utils_RoleMapper {
       
       // Verify session data was set correctly
       if (self::isDebugEnabled() && isset($_SESSION['CiviCRM'])) {
-        $sessionId = session_id();
-        self::debugLog('VIT ID createUserSession - Session ID: ' . ($sessionId ?: 'NULL') . ', CiviCRM session keys: ' . json_encode(array_keys($_SESSION['CiviCRM'])));
+        self::debugLog('VIT ID createUserSession - Session ID: ' . (session_id() ? 'SET' : 'NULL') . ', CiviCRM session keys: ' . json_encode(array_keys($_SESSION['CiviCRM'])));
       }
 
       // Verify session was set correctly (always log this, not just debug mode)

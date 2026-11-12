@@ -15,7 +15,8 @@ use Auth0\SDK\Contract\StoreInterface;
  * A login that comes back to a different hostname than it started on has a
  * different session, finds none of its values, and fails the SDK's state check;
  * the user is sent back to the login page to start again. Two logins started
- * in tabs of the same browser share one id, so only the later one can finish.
+ * in tabs of the same browser share one id: if the later one returns first it
+ * succeeds; if the earlier one returns first, both fail and the user logs in again.
  */
 class CRM_VitidAuth0_Utils_DatabaseStore implements StoreInterface {
 

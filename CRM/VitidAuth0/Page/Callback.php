@@ -155,7 +155,7 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
       $sessionCookieValue = $_COOKIE[$sessionName] ?? 'NOT_SET';
       
       // Always log session state (critical for debugging login issues)
-      Civi::log()->info('VIT ID Callback - Session state before redirect - Session Handler: ' . $sessionHandler . ', Session ID: ' . ($sessionId ?: 'NULL') . ', Session Cookie: ' . ($sessionCookieValue !== 'NOT_SET' ? 'SET' : 'NOT_SET') . ', userID: ' . ($sessionUserId ?? 'NULL') . ', ufID: ' . ($sessionUfId ?? 'NULL') . ', Expected Contact ID: ' . $userData['civicrm_id']);
+      Civi::log()->info('VIT ID Callback - Session state before redirect - Session Handler: ' . $sessionHandler . ', Session ID: ' . ($sessionId ? 'SET' : 'NULL') . ', Session Cookie: ' . ($sessionCookieValue !== 'NOT_SET' ? 'SET' : 'NOT_SET') . ', userID: ' . ($sessionUserId ?? 'NULL') . ', ufID: ' . ($sessionUfId ?? 'NULL') . ', Expected Contact ID: ' . $userData['civicrm_id']);
       
       // Verify session was set correctly
       if ($sessionUserId != $userData['civicrm_id']) {
