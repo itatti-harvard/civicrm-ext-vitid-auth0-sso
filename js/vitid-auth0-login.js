@@ -383,8 +383,12 @@
     waitForAngular(function() {
       // Wait for login form to be rendered
       waitForLoginForm(function(form) {
-        // Inject VIT ID button
-        injectVitIdButton(form);
+        try {
+          injectVitIdButton(form);
+        }
+        catch (e) {
+          giveUp('VIT ID button could not be added (' + e.message + ')');
+        }
       });
     });
   }

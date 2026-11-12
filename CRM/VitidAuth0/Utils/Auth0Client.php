@@ -225,7 +225,8 @@ class CRM_VitidAuth0_Utils_Auth0Client {
       return $userData;
 
     } catch (\Exception $e) {
-      Civi::log()->error('VIT ID callback error: ' . $e->getMessage());
+      // SDK messages can quote token values; keep them on one log line
+      Civi::log()->error('VIT ID callback error: ' . preg_replace('/[\x00-\x1F\x7F]/', ' ', $e->getMessage()));
       throw new \Exception('Failed to complete VIT ID authentication: ' . $e->getMessage(), 0, $e);
     }
   }

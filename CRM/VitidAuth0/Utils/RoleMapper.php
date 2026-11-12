@@ -691,7 +691,7 @@ class CRM_VitidAuth0_Utils_RoleMapper {
         // sign-ins of the same user at once cannot end with both sets of roles, and a
         // failed insert does not leave the user with none.
         $transaction = new CRM_Core_Transaction();
-        $civiRoles = array_unique(array_map('intval', $civiRoles));
+        $civiRoles = array_values(array_unique(array_map('intval', $civiRoles)));
         try {
           CRM_Core_DAO::executeQuery(
             "SELECT id FROM civicrm_uf_match WHERE id = %1 FOR UPDATE",

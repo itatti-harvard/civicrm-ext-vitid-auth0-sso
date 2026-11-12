@@ -218,7 +218,8 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
 
     } catch (Exception $e) {
       // Log full error details including stack trace (never expose to users)
-      $errorMessage = 'VIT ID callback error: ' . $e->getMessage();
+      // The message can quote values from the request or the token; keep it on one line
+      $errorMessage = 'VIT ID callback error: ' . preg_replace('/[\x00-\x1F\x7F]/', ' ', $e->getMessage());
       $errorMessage .= ' | File: ' . $e->getFile() . ':' . $e->getLine();
       $errorMessage .= ' | Stack trace: ' . $e->getTraceAsString();
       Civi::log()->error($errorMessage);
