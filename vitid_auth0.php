@@ -256,28 +256,6 @@ function vitid_auth0_civicrm_dao(&$dao) {
 }
 
 /**
- * Implements hook_civicrm_checkAccess().
- *
- * Grant public access to VIT ID authentication routes.
- */
-function vitid_auth0_civicrm_checkAccess($entity, $action, &$params, &$permissions) {
-  // Get the current path
-  $path = CRM_Utils_System::currentPath();
-  
-  // Allow anonymous access to VIT ID authentication pages
-  $publicPaths = [
-    'civicrm/vitid-auth0/login',
-    'civicrm/vitid-auth0/callback',
-    'civicrm/vitid-auth0/error',
-  ];
-  
-  if (in_array($path, $publicPaths)) {
-    // Grant access by returning TRUE
-    $permissions = TRUE;
-  }
-}
-
-/**
  * Implements hook_civicrm_pageRun().
  *
  * Intercept logout to handle Auth0 logout for VIT ID users.

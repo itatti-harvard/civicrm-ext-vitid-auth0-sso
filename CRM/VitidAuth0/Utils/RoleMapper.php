@@ -872,6 +872,21 @@ class CRM_VitidAuth0_Utils_RoleMapper {
       
       self::debugLog('VIT ID validateUser - Contact validated: ' . $contact['display_name']);
 
+      // A CiviCRM user an administrator has disabled must not get in through
+      // VIT ID either. A contact with no user yet is fine: one is created at login.
+      $user = \Civi\Api4\User::get(FALSE)
+        ->addSelect('id', 'is_active')
+        ->addWhere('contact_id', '=', $userData['civicrm_id'])
+        ->execute()
+        ->first();
+      if ($user && empty($user['is_active'])) {
+        Civi::log()->warning('VIT ID validateUser - Refused login: CiviCRM user ' . $user['id'] . ' for contact ID ' . $userData['civicrm_id'] . ' is disabled');
+        return [
+          'valid' => FALSE,
+          'error' => 'Your CiviCRM account has been disabled. Please contact your administrator.',
+        ];
+      }
+
     } catch (\Exception $e) {
       Civi::log()->error('Contact validation error: ' . $e->getMessage());
       return [

@@ -14,7 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Login CSRF**: Because the login state was shared by everyone, a callback link from someone else's login could complete in another person's browser and sign them in to the wrong account. The state is now tied to the browser that started the login.
 - **Session fixation**: A successful VIT ID login now issues a new session ID before the session is marked as logged in, as CiviCRM's own Standalone login does. Before, a session ID planted in the browser before login stayed valid afterwards.
 - **Return URL after login**: A return URL such as `/\evil.example/` passed the "same site" check but sends browsers to another site. Only root-relative paths and http(s) URLs on the site's own host are now accepted. The stored return URL is also used only once and is cleared when a login starts without one, so an abandoned login's destination is no longer reused by a later login.
+- **Disabled accounts**: A CiviCRM user an administrator has disabled can no longer log in through VIT ID. They see "Your CiviCRM account has been disabled. Please contact your administrator." on the login page.
 - **Uninstall**: The `vitid_auth0_debug` setting is now removed along with the other settings.
+
+### Removed
+
+- `sql/auto_install.sql`, which described an obsolete layout of `civicrm_vitid_auth0_state` and was never run; the install hook creates the tables.
+- The `hook_civicrm_checkAccess()` implementation, which CiviCRM Standalone never calls; the VIT ID routes are public through `*always allow*` in the menu file.
 - **Logout return URL**: `Auth0Client::getLogoutUrl()` now builds the return URL with `CRM_Utils_System::url()`, like the logout handler in `vitid_auth0.php`. The resulting URL is unchanged.
 
 ### Changed
