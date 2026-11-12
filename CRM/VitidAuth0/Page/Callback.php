@@ -97,6 +97,18 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
       if ($debugEnabled) {
         Civi::log()->debug('VIT ID Callback - Step 5: Mapped to CiviCRM role IDs: ' . json_encode($civiRoles));
       }
+      // Without mapped roles, signing in would keep whatever roles the user had
+      // before, so refuse (a mapping removed since step 4, or a failed lookup).
+      if (empty($civiRoles)) {
+        Civi::log()->warning('VIT ID Callback - No CiviCRM roles mapped for contact ID ' . $userData['civicrm_id'] . ' at sign-in; refused');
+        CRM_Core_Session::setStatus(
+          E::ts('You don\'t have the required permissions to access CiviCRM. Please contact your administrator.'),
+          E::ts('VIT ID Authentication Error'),
+          'error'
+        );
+        CRM_Utils_System::redirect(CRM_Utils_System::url('civicrm/login', 'reset=1', TRUE, NULL, FALSE));
+        return;
+      }
 
       // Step 6: Create user session
       if ($debugEnabled) {
@@ -121,6 +133,11 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
       // CiviCRM 6.7.2 with Redis session handler compatibility
       // CRITICAL: Ensure session is started and has a session ID before redirect
       $session = CRM_Core_Session::singleton();
+
+      // Sign-in gave this session a new ID, but the pre-sign-in session still
+      // exists with the same browser id. Drop it here so a later login's state
+      // can only come from this session.
+      $session->set(CRM_VitidAuth0_Utils_DatabaseStore::SESSION_KEY, NULL);
       
       $sessionHandler = ini_get('session.save_handler');
       $sessionSavePath = session_save_path();
@@ -192,13 +209,13 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
       $session->set('vitid_auth0_return_url', NULL);
       if (!empty($storedReturnUrl)) {
         if ($debugEnabled) {
-          Civi::log()->debug('VIT ID Callback - Found stored return URL: ' . $storedReturnUrl);
+          Civi::log()->debug('VIT ID Callback - Found stored return URL: ' . json_encode($storedReturnUrl));
         }
         if (self::isLocalUrl($storedReturnUrl)) {
           $redirectUrl = $storedReturnUrl;
         }
         else {
-          Civi::log()->warning('VIT ID Callback - Ignored potentially unsafe return URL: ' . $storedReturnUrl);
+          Civi::log()->warning('VIT ID Callback - Ignored potentially unsafe return URL: ' . json_encode($storedReturnUrl));
         }
       }
       

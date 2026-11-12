@@ -19,10 +19,17 @@
     function checkAngular() {
       attempts++;
       
-      // Check if Angular is loaded and crmLogin module is available
-      if (typeof angular !== 'undefined' && 
-          angular.module && 
-          angular.module('crmLogin')) {
+      // Check if Angular is loaded and crmLogin module is available.
+      // angular.module(name) throws while the module is not registered yet,
+      // which must not end the retries.
+      var ready = false;
+      try {
+        ready = typeof angular !== 'undefined' && !!angular.module && !!angular.module('crmLogin');
+      }
+      catch (e) {
+        ready = false;
+      }
+      if (ready) {
         callback();
         return;
       }
