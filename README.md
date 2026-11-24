@@ -74,7 +74,7 @@ See [RELEASE.md](RELEASE.md) for detailed build instructions.
    - **Application Type**: Regular Web Application
    - **Token Endpoint Authentication Method**: POST
    - **Allowed Callback URLs**: `https://civicrmurl/civicrm/vitid-auth0/callback`
-   - **Allowed Logout URLs**: `https://civicrmurl`
+   - **Allowed Logout URLs**: `https://civicrmurl/civicrm/login`
    - **Allowed Web Origins**: `https://civicrmurl`
 
 4. Note your application credentials:
@@ -219,17 +219,15 @@ vitid_auth0/
 │   │   └── Settings.php          # Admin settings form
 │   ├── Page/
 │   │   ├── Callback.php          # OAuth callback handler
-│   │   ├── Error.php             # Error page
-│   │   └── Login.php             # Login initiator
+│   │   ├── Login.php             # Login initiator
+│   │   └── Logout.php            # Logout (also ends the VIT ID session)
 │   └── Utils/
 │       ├── Auth0Client.php       # Auth0 SDK wrapper
 │       └── RoleMapper.php        # Role mapping logic
 ├── templates/
 │   └── CRM/VitidAuth0/
-│       ├── Form/
-│       │   └── Settings.tpl      # Settings form template
-│       └── Page/
-│           └── Error.tpl         # Error page template
+│       └── Form/
+│           └── Settings.tpl      # Settings form template
 ├── xml/
 │   └── Menu/
 │       └── vitid_auth0.xml       # URL routing

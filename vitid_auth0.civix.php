@@ -94,7 +94,6 @@ function _vitid_auth0_civix_civicrm_config(&$config = NULL) {
   // CiviCRM automatically discovers extension templates via the resource system.
   // Templates are found through:
   // - Form class paths: templates/CRM/VitidAuth0/Form/Settings.tpl
-  // - Page class paths: templates/CRM/VitidAuth0/Page/Error.tpl
   // - Extension mixins: menu-xml@1.0.0 and setting-php@1.0.0 (defined in info.xml)
 
   $extRoot = __DIR__ . DIRECTORY_SEPARATOR;

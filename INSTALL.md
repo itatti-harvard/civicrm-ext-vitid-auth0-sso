@@ -111,9 +111,9 @@ sudo chmod -R 755 /home/vitadmin/civicrm/ext/vitid_auth0-v1.0.0
      ```
      https://example.org/civicrm/vitid-auth0/callback
      ```
-   - **Allowed Logout URLs**:
+   - **Allowed Logout URLs** (where VIT ID sends people back after logout; add one per hostname the site is served on):
      ```
-     https://example.org
+     https://example.org/civicrm/login
      ```
    - **Allowed Web Origins**:
      ```
@@ -285,9 +285,13 @@ exports.onExecutePostLogin = async (event, api) => {
 
 1. While logged in via VIT ID, click logout
 
-2. You should be logged out of both CiviCRM and Auth0
+2. You should land on the CiviCRM login page with "You have been logged out."
 
-3. If you click "Log in with VIT ID" again immediately, you may be automatically logged back in (if Auth0 session is still active)
+3. Click "Log in with VIT ID": VIT ID must ask for your credentials again instead of signing you straight back in
+
+4. If VIT ID shows an error saying the `returnTo` URL is not in "Allowed Logout URLs", add `https://<your host>/civicrm/login` to the application's Allowed Logout URLs
+
+5. Users who logged in with a password are logged out as before, without a trip to VIT ID
 
 ## Advanced: Building from Source
 

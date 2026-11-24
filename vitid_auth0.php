@@ -247,52 +247,25 @@ function vitid_auth0_civicrm_alterContent(&$content, $context, $tplName, &$objec
 }
 
 /**
- * Implements hook_civicrm_dao().
+ * Implements hook_civicrm_alterMenu().
  *
- * Register custom DAO classes.
+ * Core's civicrm/logout page ends the session and redirects without calling
+ * parent::run(), so hook_civicrm_pageRun never fires for it; the extension's
+ * own logout page also ends the VIT ID session.
  */
-function vitid_auth0_civicrm_dao(&$dao) {
-  $dao[] = 'CRM_VitidAuth0_DAO_RoleMapping';
+function vitid_auth0_civicrm_alterMenu(&$items): void {
+  if (isset($items['civicrm/logout'])) {
+    $items['civicrm/logout']['page_callback'] = 'CRM_VitidAuth0_Page_Logout';
+  }
 }
 
 /**
  * Implements hook_civicrm_pageRun().
  *
- * Intercept logout to handle Auth0 logout for VIT ID users.
- * Also inject JavaScript and CSS for Angular-based login page (CiviCRM 6.7.2+).
+ * Inject JavaScript and CSS for Angular-based login page (CiviCRM 6.7.2+).
  */
 function vitid_auth0_civicrm_pageRun(&$page) {
   $pageName = $page->getVar('_name');
-  
-  // Handle logout for VIT ID users
-  if ($pageName === 'CRM_Core_Page_Logout') {
-    $session = CRM_Core_Session::singleton();
-    
-    // Check if this user logged in via VIT ID
-    if ($session->get('vitid_auth0_login')) {
-      try {
-        $auth0Domain = Civi::settings()->get('vitid_auth0_domain');
-        $clientId = Civi::settings()->get('vitid_auth0_client_id');
-        
-        if ($auth0Domain && $clientId) {
-          // Build the return URL (back to CiviCRM login page)
-          $returnTo = urlencode(CRM_Utils_System::url('civicrm/login', 'reset=1', TRUE, NULL, FALSE));
-          
-          // Clear CiviCRM session
-          $session->reset();
-          
-          // Redirect to Auth0 logout
-          $logoutUrl = "https://{$auth0Domain}/v2/logout?client_id={$clientId}&returnTo={$returnTo}";
-          CRM_Utils_System::redirect($logoutUrl);
-          exit;
-        }
-      } catch (Exception $e) {
-        // Log the error but allow standard logout to proceed
-        Civi::log()->error('VIT ID Auth0 logout error: ' . $e->getMessage());
-      }
-    }
-    // If not a VIT ID login, let standard logout proceed
-  }
   
   // Handle login page for Angular-based login (CiviCRM 6.7.2+)
   // Check if this is the standalone login page
