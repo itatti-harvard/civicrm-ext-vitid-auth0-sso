@@ -13,12 +13,6 @@
     <access_arguments>*always allow*</access_arguments>
   </item>
   <item>
-    <path>civicrm/vitid-auth0/error</path>
-    <page_callback>CRM_VitidAuth0_Page_Error</page_callback>
-    <title>VIT ID Error</title>
-    <access_arguments>*always allow*</access_arguments>
-  </item>
-  <item>
     <path>civicrm/admin/vitid-auth0/settings</path>
     <page_callback>CRM_VitidAuth0_Form_Settings</page_callback>
     <title>VIT ID Authentication Settings</title>

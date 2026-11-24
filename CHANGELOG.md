@@ -5,6 +5,22 @@ All notable changes to the VIT ID Authentication extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.8] - 24 November 2026
+
+### Fixed
+
+- **Logout**: Logging out of CiviCRM after signing in with VIT ID now also signs you out of VIT ID. Before, the VIT ID session stayed open, so clicking "Log in with VIT ID" signed the next person at the same computer straight back in without asking for credentials. The extension's logout handler never ran, because CiviCRM's logout page does not fire `hook_civicrm_pageRun`; the extension now replaces the `civicrm/logout` page. After VIT ID logout you land on the CiviCRM login page with "You have been logged out." Users who logged in with a password are logged out as before, without a trip to VIT ID. If the VIT ID logout address cannot be built (incomplete settings), you are still logged out of CiviCRM and the error is logged.
+
+### Action required
+
+- Add `https://<host>/civicrm/login` to the Auth0 application's **Allowed Logout URLs** for every hostname the site is served on, before installing this version. Without it, VIT ID shows an error page after logout (you are still logged out of CiviCRM). Auth0 ignores the query string when it checks this URL.
+
+### Removed
+
+- The `civicrm/vitid-auth0/error` page, its route and its `Error.tpl` template: nothing linked to it since errors are shown on the login page.
+- `vitid_auth0_civicrm_dao()`, named like a hook CiviCRM does not have, and never called.
+- `Auth0Client::fetchRoles()` and `getManagementApiToken()`, which nothing called.
+
 ## [1.9.7] - 24 November 2026
 
 ### Fixed

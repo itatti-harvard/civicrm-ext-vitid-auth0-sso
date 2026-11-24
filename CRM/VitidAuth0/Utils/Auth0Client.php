@@ -232,106 +232,16 @@ class CRM_VitidAuth0_Utils_Auth0Client {
   }
 
   /**
-   * Fetch roles from Auth0 using Management API.
+   * Get the Auth0 URL that ends the VIT ID session and returns to the CiviCRM
+   * login page, which then shows core's "You have been logged out" message.
    *
-   * @return array List of roles
-   * @throws \Exception
-   */
-  public function fetchRoles() {
-    try {
-      // Get Management API token
-      $managementToken = $this->getManagementApiToken();
-
-      // Fetch roles from Auth0
-      $rolesUrl = "https://{$this->config['domain']}/api/v2/roles";
-      
-      $ch = curl_init($rolesUrl);
-      curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-      curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-      curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-      curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Authorization: Bearer ' . $managementToken,
-        'Content-Type: application/json',
-      ]);
-
-      $response = curl_exec($ch);
-      $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-      curl_close($ch);
-
-      if ($httpCode !== 200) {
-        throw new \Exception('Failed to fetch roles from VIT ID. HTTP Code: ' . $httpCode);
-      }
-
-      $roles = json_decode($response, true);
-      
-      if (!is_array($roles)) {
-        throw new \Exception('Invalid response from VIT ID API.');
-      }
-
-      return $roles;
-
-    } catch (\Exception $e) {
-      Civi::log()->error('VIT ID fetch roles error: ' . $e->getMessage());
-      throw $e;
-    }
-  }
-
-  /**
-   * Get Management API token.
+   * https://<host>/civicrm/login must be in the Auth0 application's Allowed
+   * Logout URLs; Auth0's /v2/logout ignores the query string when it checks.
    *
    * @return string
-   * @throws \Exception
-   */
-  private function getManagementApiToken() {
-    // Note: We could potentially use the SDK for this too if we configured it for Management API
-    // But for now, keeping the existing working curl implementation for Management API is fine
-    // as it's separate from the authentication flow we're refactoring.
-    
-    $tokenUrl = "https://{$this->config['domain']}/oauth/token";
-    
-    $data = [
-      'grant_type' => 'client_credentials',
-      'client_id' => $this->config['clientId'],
-      'client_secret' => $this->config['clientSecret'],
-      'audience' => "https://{$this->config['domain']}/api/v2/",
-    ];
-
-    $ch = curl_init($tokenUrl);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-      'Content-Type: application/json',
-    ]);
-
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    if ($httpCode !== 200) {
-      throw new \Exception('Failed to get Management API token. HTTP Code: ' . $httpCode);
-    }
-
-    $tokenData = json_decode($response, true);
-    
-    if (empty($tokenData['access_token'])) {
-      throw new \Exception('Management API token not received.');
-    }
-
-    return $tokenData['access_token'];
-  }
-
-  /**
-   * Logout from Auth0.
-   *
-   * @return string Logout URL
    */
   public function getLogoutUrl() {
-    // Same return URL as the logout handler in vitid_auth0.php; it must be
-    // listed in the Auth0 application's Allowed Logout URLs.
-    $returnTo = CRM_Utils_System::url('civicrm/login', 'reset=1', TRUE, NULL, FALSE);
+    $returnTo = CRM_Utils_System::url('civicrm/login', 'justLoggedOut', TRUE, NULL, FALSE);
     return $this->auth0->logout($returnTo);
   }
 }
