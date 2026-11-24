@@ -10,7 +10,7 @@
       <div class="label">{$form.vitid_auth0_domain.label}</div>
       <div class="content">
         {$form.vitid_auth0_domain.html}
-        <div class="description">{ts}Enter your Auth0 tenant domain (e.g., your-tenant.auth0.com) without https://{/ts}</div>
+        <div class="description">{ts}Your Auth0 tenant domain or custom domain, without https://{/ts}</div>
       </div>
       <div class="clear"></div>
     </div>
@@ -28,7 +28,7 @@
       <div class="label">{$form.vitid_auth0_client_secret.label}</div>
       <div class="content">
         {$form.vitid_auth0_client_secret.html}
-        <div class="description">{ts}Found in your Auth0 application settings. Keep this secure!{/ts}</div>
+        <div class="description">{if $hasClientSecret}{ts}A secret is saved. Leave this empty to keep it, or enter a new one to replace it.{/ts}{else}{ts}Found in your Auth0 application settings.{/ts}{/if}</div>
       </div>
       <div class="clear"></div>
     </div>

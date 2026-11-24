@@ -35,7 +35,7 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
               if (preg_match('/^[a-f0-9]+$/i', $value)) {
                 $params[$param] = $value;
               } else {
-                Civi::log()->warning('VIT ID Callback - Invalid state parameter format: ' . substr($value, 0, 50));
+                Civi::log()->warning('VIT ID Callback - Invalid state parameter format: ' . json_encode(substr($value, 0, 50), JSON_INVALID_UTF8_SUBSTITUTE));
                 throw new Exception('Invalid state parameter format.');
               }
             } elseif ($param === 'code' && !empty($value)) {
@@ -43,17 +43,12 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
               if (preg_match('/^[A-Za-z0-9\-_]+$/', $value)) {
                 $params[$param] = $value;
               } else {
-                Civi::log()->warning('VIT ID Callback - Invalid code parameter format: ' . substr($value, 0, 50));
+                Civi::log()->warning('VIT ID Callback - Invalid code parameter format: ' . json_encode(substr($value, 0, 50), JSON_INVALID_UTF8_SUBSTITUTE));
                 throw new Exception('Invalid authorization code format.');
               }
             } elseif (in_array($param, ['error', 'error_description'])) {
-              // Error parameters: allow alphanumeric, spaces, and common punctuation
-              if (preg_match('/^[A-Za-z0-9\s\-_.,:;!?()]+$/u', $value)) {
-                $params[$param] = $value;
-              } else {
-                // Log but don't fail - error messages might contain special chars
-                $params[$param] = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
-              }
+              // Only ever logged (JSON-encoded), never shown to the user
+              $params[$param] = $value;
             }
           }
         }
@@ -97,6 +92,18 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
       if ($debugEnabled) {
         Civi::log()->debug('VIT ID Callback - Step 5: Mapped to CiviCRM role IDs: ' . json_encode($civiRoles));
       }
+      // Without mapped roles, signing in would keep whatever roles the user had
+      // before, so refuse (a mapping removed since step 4, or a failed lookup).
+      if (empty($civiRoles)) {
+        Civi::log()->warning('VIT ID Callback - No CiviCRM roles mapped for contact ID ' . $userData['civicrm_id'] . ' at sign-in; refused');
+        CRM_Core_Session::setStatus(
+          E::ts('You don\'t have the required permissions to access CiviCRM. Please contact your administrator.'),
+          E::ts('VIT ID Authentication Error'),
+          'error'
+        );
+        CRM_Utils_System::redirect(CRM_Utils_System::url('civicrm/login', 'reset=1', TRUE, NULL, FALSE));
+        return;
+      }
 
       // Step 6: Create user session
       if ($debugEnabled) {
@@ -121,18 +128,17 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
       // CiviCRM 6.7.2 with Redis session handler compatibility
       // CRITICAL: Ensure session is started and has a session ID before redirect
       $session = CRM_Core_Session::singleton();
+
+      // Sign-in gave this session a new ID, but the pre-sign-in session still
+      // exists with the same browser id. Drop it here so a later login's state
+      // can only come from this session.
+      $session->set(CRM_VitidAuth0_Utils_DatabaseStore::SESSION_KEY, NULL);
       
       $sessionHandler = ini_get('session.save_handler');
-      $sessionSavePath = session_save_path();
-      
-      // CiviCRM 6.7.2 with Redis session handler compatibility
-      // Redis session handler automatically manages session IDs and cookies
+
+      // Not the save path: for Redis it can contain the password
       if ($debugEnabled) {
-        Civi::log()->debug('VIT ID Callback - Session handler: ' . $sessionHandler . ', Save path: ' . ($sessionSavePath ?: 'default'));
-        
-        if ($sessionHandler === 'redis' && $sessionSavePath) {
-          Civi::log()->debug('VIT ID Callback - Using Redis session handler: ' . $sessionSavePath);
-        }
+        Civi::log()->debug('VIT ID Callback - Session handler: ' . $sessionHandler);
       }
       
       // Store session objects - this ensures CiviCRM session data is persisted
@@ -155,7 +161,7 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
       $sessionCookieValue = $_COOKIE[$sessionName] ?? 'NOT_SET';
       
       // Always log session state (critical for debugging login issues)
-      Civi::log()->info('VIT ID Callback - Session state before redirect - Session Handler: ' . $sessionHandler . ', Session ID: ' . ($sessionId ?: 'NULL') . ', Session Cookie: ' . ($sessionCookieValue !== 'NOT_SET' ? 'SET' : 'NOT_SET') . ', userID: ' . ($sessionUserId ?? 'NULL') . ', ufID: ' . ($sessionUfId ?? 'NULL') . ', Expected Contact ID: ' . $userData['civicrm_id']);
+      Civi::log()->info('VIT ID Callback - Session state before redirect - Session Handler: ' . $sessionHandler . ', Session ID: ' . ($sessionId ? 'SET' : 'NULL') . ', Session Cookie: ' . ($sessionCookieValue !== 'NOT_SET' ? 'SET' : 'NOT_SET') . ', userID: ' . ($sessionUserId ?? 'NULL') . ', ufID: ' . ($sessionUfId ?? 'NULL') . ', Expected Contact ID: ' . $userData['civicrm_id']);
       
       // Verify session was set correctly
       if ($sessionUserId != $userData['civicrm_id']) {
@@ -187,24 +193,18 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
       // Using dashboard instead of just /civicrm as it's the standard post-login destination
       $redirectUrl = CRM_Utils_System::url('civicrm/dashboard', '', TRUE, NULL, FALSE);
       
-      // Check if we have a stored return URL
+      // Use the stored return URL once, and only if it points at this site
       $storedReturnUrl = $session->get('vitid_auth0_return_url');
+      $session->set('vitid_auth0_return_url', NULL);
       if (!empty($storedReturnUrl)) {
         if ($debugEnabled) {
-          Civi::log()->debug('VIT ID Callback - Found stored return URL: ' . $storedReturnUrl);
+          Civi::log()->debug('VIT ID Callback - Found stored return URL: ' . json_encode($storedReturnUrl, JSON_INVALID_UTF8_SUBSTITUTE));
         }
-        // Validate URL to prevent open redirect vulnerabilities
-        // Ensure it's a local URL or trusted domain
-        $baseUrl = CRM_Utils_System::url('civicrm', '', TRUE, NULL, FALSE);
-        $baseUrlHost = parse_url($baseUrl, PHP_URL_HOST);
-        $returnUrlHost = parse_url($storedReturnUrl, PHP_URL_HOST);
-        
-        if (empty($returnUrlHost) || $returnUrlHost === $baseUrlHost) {
+        if (self::isLocalUrl($storedReturnUrl)) {
           $redirectUrl = $storedReturnUrl;
-          // Clear the stored URL
-          $session->set('vitid_auth0_return_url', NULL);
-        } else {
-          Civi::log()->warning('VIT ID Callback - Ignored potentially unsafe return URL: ' . $storedReturnUrl);
+        }
+        else {
+          Civi::log()->warning('VIT ID Callback - Ignored potentially unsafe return URL: ' . json_encode($storedReturnUrl, JSON_INVALID_UTF8_SUBSTITUTE));
         }
       }
       
@@ -218,15 +218,24 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
 
     } catch (Exception $e) {
       // Log full error details including stack trace (never expose to users)
-      $errorMessage = 'VIT ID callback error: ' . $e->getMessage();
+      // The message can quote values from the request or the token; keep it on one line
+      $errorMessage = 'VIT ID callback error: ' . preg_replace('/[\x00-\x1F\x7F]/', ' ', $e->getMessage());
       $errorMessage .= ' | File: ' . $e->getFile() . ':' . $e->getLine();
       $errorMessage .= ' | Stack trace: ' . $e->getTraceAsString();
       Civi::log()->error($errorMessage);
 
-      // Always show generic error message to users (security best practice)
-      // Full error details are logged above for administrators to review
-      $userErrorMessage = E::ts('An error occurred during VIT ID authentication. Please try again or contact your administrator.');
-      
+      // Show users a generic message; full details are logged above.
+      // A login whose stored state is gone (started in another window or on the
+      // other hostname, or left on the VIT ID page past an hour) just needs a new start.
+      if (self::loginMustRestart($e)) {
+        $userErrorMessage = E::ts('Your VIT ID sign-in expired or was started in another window. Please sign in again.');
+        $userErrorTitle = E::ts('Please Sign In Again');
+      }
+      else {
+        $userErrorMessage = E::ts('An error occurred during VIT ID authentication. Please try again or contact your administrator.');
+        $userErrorTitle = E::ts('VIT ID Authentication Error');
+      }
+
       // In debug mode, log additional context but still don't expose to users
       if ($debugEnabled) {
         Civi::log()->debug('VIT ID Callback - Error details (debug mode): ' . $e->getMessage());
@@ -235,7 +244,7 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
       // Display error on login page
       CRM_Core_Session::setStatus(
         $userErrorMessage,
-        E::ts('VIT ID Authentication Error'),
+        $userErrorTitle,
         'error'
       );
       
@@ -250,5 +259,49 @@ class CRM_VitidAuth0_Page_Callback extends CRM_Core_Page {
 
     // This should never be reached, but included for safety
     parent::run();
+  }
+
+  /**
+   * Whether the callback failed because this browser's stored login values
+   * (state, PKCE verifier, nonce) are missing or belong to another login.
+   *
+   * @param \Throwable $e
+   * @return bool
+   */
+  private static function loginMustRestart(\Throwable $e) {
+    $cause = $e->getPrevious();
+    return $cause instanceof \Auth0\SDK\Exception\StateException
+      && in_array($cause->getMessage(), [
+        \Auth0\SDK\Exception\StateException::MSG_INVALID_STATE,
+        \Auth0\SDK\Exception\StateException::MSG_MISSING_CODE_VERIFIER,
+        \Auth0\SDK\Exception\StateException::MSG_MISSING_NONCE,
+      ], TRUE);
+  }
+
+  /**
+   * Whether a post-login return URL stays on this site: a root-relative path,
+   * or an absolute http(s) URL on the site's own host.
+   *
+   * Backslashes and control characters are refused outright: browsers read
+   * "/\evil.example" as "//evil.example", while parse_url() sees no host.
+   *
+   * @param string $url
+   * @return bool
+   */
+  private static function isLocalUrl($url) {
+    if (!is_string($url) || $url === '' || preg_match('/[\\\\\x00-\x1F\x7F]/', $url)) {
+      return FALSE;
+    }
+    if ($url[0] === '/') {
+      return !isset($url[1]) || $url[1] !== '/';
+    }
+    $parts = parse_url($url);
+    $siteHost = parse_url(CRM_Utils_System::url('civicrm', '', TRUE, NULL, FALSE), PHP_URL_HOST);
+    return is_array($parts)
+      && in_array(strtolower($parts['scheme'] ?? ''), ['http', 'https'], TRUE)
+      && !empty($parts['host'])
+      && strcasecmp($parts['host'], (string) $siteHost) === 0
+      && !isset($parts['user'])
+      && !isset($parts['pass']);
   }
 }

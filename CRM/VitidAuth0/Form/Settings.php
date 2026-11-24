@@ -8,6 +8,11 @@ use CRM_VitidAuth0_ExtensionUtil as E;
 class CRM_VitidAuth0_Form_Settings extends CRM_Core_Form {
 
   /**
+   * A hostname such as tenant.eu.auth0.com or a custom domain like login.example.org.
+   */
+  const DOMAIN_PATTERN = '/^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$/i';
+
+  /**
    * Get the template file name.
    *
    * @return string
@@ -27,11 +32,10 @@ class CRM_VitidAuth0_Form_Settings extends CRM_Core_Form {
       'text',
       'vitid_auth0_domain',
       E::ts('Auth0 Domain'),
-      ['size' => 50, 'placeholder' => 'your-tenant.auth0.com or your-tenant.eu.auth0.com'],
+      ['size' => 50, 'placeholder' => 'your-tenant.eu.auth0.com or login.example.org'],
       TRUE
     );
-    // Validate domain format (supports standard and regional Auth0 domains)
-    $this->addRule('vitid_auth0_domain', E::ts('Please enter a valid Auth0 domain (e.g., your-tenant.auth0.com or your-tenant.eu.auth0.com)'), 'regex', '/^[a-zA-Z0-9][a-zA-Z0-9\-_]*[a-zA-Z0-9]*(\.(eu|us|au|jp))?\.auth0\.com$/');
+    $this->addRule('vitid_auth0_domain', E::ts('Enter the domain without https://, for example your-tenant.eu.auth0.com or login.example.org.'), 'regex', self::DOMAIN_PATTERN);
 
     $this->add(
       'text',
@@ -43,12 +47,20 @@ class CRM_VitidAuth0_Form_Settings extends CRM_Core_Form {
     // Validate client ID format (alphanumeric and some special chars)
     $this->addRule('vitid_auth0_client_id', E::ts('Client ID contains invalid characters'), 'regex', '/^[A-Za-z0-9\-_]+$/');
 
+    // The saved secret is never sent back to the browser; leaving the field
+    // empty keeps it, so it is only required until one has been saved.
+    $hasSecret = !empty(Civi::settings()->get('vitid_auth0_client_secret'));
+    $this->assign('hasClientSecret', $hasSecret);
     $this->add(
       'password',
       'vitid_auth0_client_secret',
       E::ts('Auth0 Client Secret'),
-      ['size' => 50],
-      TRUE
+      [
+        'size' => 50,
+        'autocomplete' => 'new-password',
+        'placeholder' => $hasSecret ? E::ts('Saved; leave empty to keep it') : '',
+      ],
+      !$hasSecret
     );
     // Client secret validation - basic length check (Auth0 secrets are typically long)
     $this->addRule('vitid_auth0_client_secret', E::ts('Client secret must be at least 10 characters'), 'minlength', 10);
@@ -118,7 +130,6 @@ class CRM_VitidAuth0_Form_Settings extends CRM_Core_Form {
     
     $defaults['vitid_auth0_domain'] = Civi::settings()->get('vitid_auth0_domain');
     $defaults['vitid_auth0_client_id'] = Civi::settings()->get('vitid_auth0_client_id');
-    $defaults['vitid_auth0_client_secret'] = Civi::settings()->get('vitid_auth0_client_secret');
     $defaults['vitid_auth0_debug'] = Civi::settings()->get('vitid_auth0_debug');
 
     return $defaults;
@@ -169,9 +180,9 @@ class CRM_VitidAuth0_Form_Settings extends CRM_Core_Form {
           'success'
         );
       } catch (Exception $e) {
-        Civi::log()->error('Error deleting role mapping: ' . $e->getMessage());
+        Civi::log()->error('Error deleting role mapping ' . (int) $mappingId . ': ' . $e->getMessage());
         CRM_Core_Session::setStatus(
-          E::ts('Error deleting role mapping: %1', [1 => $e->getMessage()]),
+          E::ts('The role mapping could not be deleted. Please try again; if it keeps failing, check the CiviCRM log.'),
           E::ts('Error'),
           'error'
         );
@@ -225,6 +236,19 @@ class CRM_VitidAuth0_Form_Settings extends CRM_Core_Form {
         return;
       }
 
+      $alreadyMapped = CRM_Core_DAO::singleValueQuery(
+        "SELECT COUNT(*) FROM civicrm_vitid_role_mapping WHERE auth0_role_name = %1",
+        [1 => [$auth0RoleName, 'String']]
+      );
+      if ($alreadyMapped) {
+        CRM_Core_Session::setStatus(
+          E::ts('The Auth0 role "%1" is already mapped. To change its CiviCRM role, delete the existing mapping and add it again.', [1 => $auth0RoleName]),
+          E::ts('Already Mapped'),
+          'error'
+        );
+        return;
+      }
+
       try {
         CRM_Core_DAO::executeQuery(
           "INSERT INTO civicrm_vitid_role_mapping (auth0_role_name, civicrm_role_id, is_active) 
@@ -241,9 +265,9 @@ class CRM_VitidAuth0_Form_Settings extends CRM_Core_Form {
           'success'
         );
       } catch (Exception $e) {
-        Civi::log()->error('Error adding role mapping: ' . $e->getMessage());
+        Civi::log()->error('Error adding role mapping for ' . json_encode($auth0RoleName) . ': ' . $e->getMessage());
         CRM_Core_Session::setStatus(
-          E::ts('Error adding role mapping: %1', [1 => $e->getMessage()]),
+          E::ts('The role mapping could not be added. Please try again; if it keeps failing, check the CiviCRM log.'),
           E::ts('Error'),
           'error'
         );
@@ -255,11 +279,10 @@ class CRM_VitidAuth0_Form_Settings extends CRM_Core_Form {
     }
 
     // Handle save settings (default action)
-    // Validate and sanitize domain (supports standard and regional Auth0 domains)
     $domain = trim($values['vitid_auth0_domain'] ?? '');
-    if (!empty($domain) && !preg_match('/^[a-zA-Z0-9][a-zA-Z0-9\-_]*[a-zA-Z0-9]*(\.(eu|us|au|jp))?\.auth0\.com$/', $domain)) {
+    if (!empty($domain) && !preg_match(self::DOMAIN_PATTERN, $domain)) {
       CRM_Core_Session::setStatus(
-        E::ts('Invalid Auth0 domain format. Please enter a valid domain (e.g., your-tenant.auth0.com or your-tenant.eu.auth0.com).'),
+        E::ts('Enter the domain without https://, for example your-tenant.eu.auth0.com or login.example.org.'),
         E::ts('Invalid Format'),
         'error'
       );
